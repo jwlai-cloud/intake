@@ -176,6 +176,14 @@ or imply a clinical or professional next action. For items marked `high_risk`
 it offers no suggested answer at all: it shows the quote and the human writes
 the answer.
 
+## Licence
+
+[PolyForm Noncommercial 1.0.0](LICENSE.md) — source-available, free for any
+noncommercial purpose, and free to read, fork and run for the judging of this
+contest. Commercial use requires a separate licence. This is deliberately not
+an OSI-approved open-source licence; the contest requires a public repo, not a
+permissive one.
+
 ## Built for
 
 [All Things Agentic Hackathon](https://allthingsagentichackathon.devpost.com/)
