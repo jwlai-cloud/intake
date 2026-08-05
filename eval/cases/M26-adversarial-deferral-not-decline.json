@@ -1,0 +1,9 @@
+{
+  "case_id": "M26-adversarial-deferral-not-decline",
+  "template_id": "community-nursing-v1",
+  "item_id": "M26",
+  "utterance": "Can we come back to that one at the end?",
+  "label": "insufficient",
+  "why": "A deferral is not a decline. Recording it as declined would close an item the interviewee intends to answer.",
+  "adversarial": true
+}

@@ -1,0 +1,9 @@
+{
+  "case_id": "M14-adversarial-count-without-recency",
+  "template_id": "community-nursing-v1",
+  "item_id": "M14",
+  "utterance": "Four times in the last two years, I'd say.",
+  "label": "insufficient",
+  "why": "A count, but over the wrong window and with no circumstances. The item asks about twelve months.",
+  "adversarial": true
+}

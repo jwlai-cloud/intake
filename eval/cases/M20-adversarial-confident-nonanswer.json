@@ -1,0 +1,9 @@
+{
+  "case_id": "M20-adversarial-confident-nonanswer",
+  "template_id": "community-nursing-v1",
+  "item_id": "M20",
+  "utterance": "Access is absolutely fine, I've never had a moment's bother with this house in thirty-one years.",
+  "label": "insufficient",
+  "why": "Duration and certainty stand in for the entry route and the internal stairs. Neither is recorded.",
+  "adversarial": true
+}

@@ -1,0 +1,12 @@
+{
+  "case_id": "M14-adversarial-walked-back",
+  "template_id": "community-nursing-v1",
+  "item_id": "M14",
+  "turns": [
+    "Three falls, and the last was in May on the stairs.",
+    "No, hang on — I'm thinking of my sister. I've not actually fallen myself, not that I can bring to mind."
+  ],
+  "label": "insufficient",
+  "why": "A sufficient answer is retracted in the next turn. The retraction governs: the record now has no count and no circumstances.",
+  "adversarial": true
+}

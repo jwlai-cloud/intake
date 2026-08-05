@@ -1,0 +1,9 @@
+{
+  "case_id": "M06-adversarial-oblique-phrasing",
+  "template_id": "community-nursing-v1",
+  "item_id": "M06",
+  "utterance": "The frame goes everywhere with me indoors. Getting off the bed is the only bit I need a hand with — chairs I manage.",
+  "label": "sufficient",
+  "why": "Aid, indoor mobility and transfer help are all recorded, none in the guidance's own wording.",
+  "adversarial": true
+}

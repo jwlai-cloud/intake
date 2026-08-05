@@ -81,7 +81,18 @@ See `docs/ARCHITECTURE.md` for detail and `docs/adr/` for why.
 ```bash
 cp .env.example .env
 # edit .env: GOOGLE_CLOUD_PROJECT, and leave GOOGLE_GENAI_USE_VERTEXAI=TRUE
-gcloud services enable aiplatform.googleapis.com firestore.googleapis.com run.googleapis.com
+gcloud services enable aiplatform.googleapis.com firestore.googleapis.com \
+  run.googleapis.com cloudbuild.googleapis.com secretmanager.googleapis.com
+```
+
+If your shell exports `GOOGLE_APPLICATION_CREDENTIALS`, **unset it**. A service
+account key file in that variable silently overrides
+`gcloud auth application-default login`, so every call authenticates as that
+service account against whichever project owns it — including, if you are not
+watching, a completely different one from the project in your `.env`.
+
+```bash
+unset GOOGLE_APPLICATION_CREDENTIALS
 ```
 
 Firestore must be in **native mode**. If your project's default database is in

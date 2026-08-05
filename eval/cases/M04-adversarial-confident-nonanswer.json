@@ -1,0 +1,9 @@
+{
+  "case_id": "M04-adversarial-confident-nonanswer",
+  "template_id": "community-nursing-v1",
+  "item_id": "M04",
+  "utterance": "I'm very much on top of my medication, I always have been. My late husband was a pharmacist, so I know exactly what I'm doing with tablets.",
+  "label": "insufficient",
+  "why": "Fluent, confident and specific-sounding, but names no medication and states no adherence. The classic false tick.",
+  "adversarial": true
+}

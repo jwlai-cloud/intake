@@ -114,16 +114,22 @@ def main() -> int:
 
     tp = matrix["sufficient"]["sufficient"]
     fp = sum(matrix[t]["sufficient"] for t in LABELS if t != "sufficient")
-    precision = tp / (tp + fp) if tp + fp else 1.0
-    recall = tp / sum(matrix["sufficient"].values()) if scored else 0.0
+    labelled_sufficient = sum(matrix["sufficient"].values())
+    # "precision 100% on zero cases" is how a totally broken run reads as a
+    # perfect one. Report the absence instead.
+    precision = f"{tp / (tp + fp):.1%}" if tp + fp else "n/a"
+    recall = f"{tp / labelled_sufficient:.1%}" if labelled_sufficient else "n/a"
 
     pct = f"  ({correct / scored:.1%})" if scored else ""
     print(f"\naccuracy              {correct}/{scored}{pct}")
-    print(f"precision(sufficient) {precision:.1%}   ← the number that matters")
-    print(f"recall(sufficient)    {recall:.1%}")
+    print(f"precision(sufficient) {precision}   ← the number that matters")
+    print(f"recall(sufficient)    {recall}")
     if errors:
         print(f"errors                {len(errors)}")
 
+    if not scored:
+        print("\nFAIL — nothing was scored. Every case errored.")
+        return 1
     if critical:
         print(f"\nFAIL — {len(critical)} insufficient answer(s) marked sufficient.")
         return 1

@@ -1,0 +1,9 @@
+{
+  "case_id": "M18-adversarial-practitioner-supplied",
+  "template_id": "community-nursing-v1",
+  "item_id": "M18",
+  "utterance": "Mm. Mm-hm. That's right.",
+  "label": "insufficient",
+  "why": "Assent to something the practitioner said is not the interviewee answering. Nothing about relationship or frequency is on the record.",
+  "adversarial": true
+}

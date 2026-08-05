@@ -1,0 +1,12 @@
+{
+  "case_id": "M24-adversarial-decline-then-answer",
+  "template_id": "community-nursing-v1",
+  "item_id": "M24",
+  "turns": [
+    "I'd rather not say, if it's all the same.",
+    "Oh, go on then — it's two glasses of wine on a Friday and nothing else."
+  ],
+  "label": "sufficient",
+  "why": "A decline reversed by a real answer in the next turn. The answer governs; this must not stay recorded as declined.",
+  "adversarial": true
+}

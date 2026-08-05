@@ -1,0 +1,9 @@
+{
+  "case_id": "M14-adversarial-unusual-order",
+  "template_id": "community-nursing-v1",
+  "item_id": "M14",
+  "utterance": "Coming down the stairs in May, that was the most recent one. Before that there'd been two others, so three altogether.",
+  "label": "sufficient",
+  "why": "Circumstances first, count last, count stated as a sum. Both required elements are present in an order the prompt does not suggest.",
+  "adversarial": true
+}

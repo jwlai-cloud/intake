@@ -1,0 +1,12 @@
+{
+  "case_id": "M08-adversarial-answer-then-decline",
+  "template_id": "community-nursing-v1",
+  "item_id": "M08",
+  "turns": [
+    "Dry in the day, pad at night, two or three nights a week.",
+    "Actually, scrub that, I don't want any of that written down."
+  ],
+  "label": "declined",
+  "why": "A sufficient answer withdrawn by an explicit refusal to have it recorded. The withdrawal governs.",
+  "adversarial": true
+}

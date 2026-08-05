@@ -1,0 +1,9 @@
+{
+  "case_id": "M22-adversarial-precise-but-wrong-element",
+  "template_id": "community-nursing-v1",
+  "item_id": "M22",
+  "utterance": "It started on the fourteenth of March, about half past six in the evening.",
+  "label": "insufficient",
+  "why": "Highly specific about onset — an element the guidance does not ask for — while site and severity, which it does ask for, are absent.",
+  "adversarial": true
+}

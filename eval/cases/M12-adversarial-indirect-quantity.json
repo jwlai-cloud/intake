@@ -1,0 +1,9 @@
+{
+  "case_id": "M12-adversarial-indirect-quantity",
+  "template_id": "community-nursing-v1",
+  "item_id": "M12",
+  "utterance": "I've gone off my food completely. I've had to take my wedding ring to be resized twice since the spring.",
+  "label": "sufficient",
+  "why": "Weight change quantified by an indirect but concrete proxy, which the guidance explicitly allows via clothing fit.",
+  "adversarial": true
+}
