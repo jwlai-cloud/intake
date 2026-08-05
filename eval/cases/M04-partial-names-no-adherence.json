@@ -1,0 +1,13 @@
+{
+  "case_id": "M04-partial-names-no-adherence",
+  "item": {
+    "id": "M04",
+    "prompt": "Current medications and adherence",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer records the medications currently taken by name or class, and whether they are taken as prescribed. 'The usual', 'my tablets' or a count of boxes is not sufficient.",
+  "utterance": "Ramipril, and something for cholesterol.",
+  "label": "insufficient",
+  "why": "Medications partly named but adherence not recorded."
+}

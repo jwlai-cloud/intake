@@ -5,6 +5,75 @@ entry at the top.
 
 ---
 
+## 2026-08-05 (evening) — adjudicator and eval harness
+
+**Score: 35/35 cases correct. Precision on `sufficient` 100%, recall 100%.**
+No case labelled insufficient was marked sufficient — the gate passes. Stable
+across three consecutive runs at `temperature=0`, which matters because the
+demo take is unedited. Model `gemini-3.6-flash` via Vertex AI (`location=global`),
+`google-genai==1.50.1`.
+
+**Done**
+
+- `backend/intake_agent/adjudicator.py` — one Gemini call per item, Vertex AI,
+  `response_schema`-constrained JSON returning `verdict` / `evidence` /
+  `missing` / `reason`. Verdict is the three-state vocabulary from ADR-0005:
+  `sufficient` · `insufficient` · `declined`. The system instruction is the
+  product: it defaults to insufficient, forbids inference to fill a gap,
+  requires the evidence span to be verbatim, and makes the template's guidance
+  note authoritative over the model's own taste (ADR-0003, ADR-0006).
+- `eval/run_eval.py` — loads `eval/cases/*.json`, adjudicates them in a thread
+  pool, prints a 3×3 confusion matrix plus precision/recall on `sufficient`,
+  and exits 1 if any insufficient case was marked sufficient. `--item`,
+  `--demo`, `--model`, `--workers`.
+- `eval/cases/` — 35 cases across 14 required items of the synthetic community
+  nursing template. 15 sufficient · 16 insufficient · 4 declined, including
+  partial answers, answers arriving across two turns, deflections that are
+  *not* declines, and explicit declines on items with `accepts_declined`.
+- `eval/test_gate.py` — offline check that the harness itself fails when it
+  should. An always-"sufficient" stub must exit 1. No model calls.
+- Root `pyproject.toml` pinning `google-genai==1.50.1`.
+- `LICENSE.md` — PolyForm Noncommercial 1.0.0. Public repo, noncommercial use.
+- `docs/design/intake-prototype.html` — static UI reference for step 5, not
+  wired to anything.
+
+**Notes and caveats**
+
+- 100% is a signal to *harden the cases*, not to celebrate. The set does not
+  yet contain a case the adjudicator gets wrong, so it cannot currently detect
+  a prompt regression that is subtler than the ones it was written against.
+  Before recording, add adversarial cases: an answer that satisfies the
+  guidance in unusual word order, a confident-sounding non-answer, and an
+  interviewee correcting an earlier sufficient answer into an insufficient one.
+- Two cases were sharpened during the run rather than left ambiguous:
+  `M28-insufficient-some-bits` originally ended "I couldn't tell you what",
+  which is a genuine borderline between insufficient and declined. If a case
+  is arguable, it does not belong in a gate.
+- Threading detail worth remembering: constructing the `genai.Client` inside
+  worker threads races, and the discarded duplicate closes the shared
+  transport, producing `Cannot send a request, as the client has been closed`.
+  Build it once and pass it in.
+- The item ids and guidance notes currently live inline in each case file. Step
+  3 (encode the template) should make the template the single source and have
+  the cases reference it by item id, so the two cannot drift.
+
+**Next, in priority order**
+
+1. Encode the synthetic nursing template per ADR-0003; point the eval cases at
+   it by `item_id` instead of duplicating item and guidance inline. Check
+   `depends_on` branching.
+2. Harden the eval set with the adversarial cases described above.
+3. ADK agent on Cloud Run wrapping the adjudicator; Firestore session schema.
+4. React front end: mic → chunks → POST; Firestore listener → live UI.
+5. Three-state gate (ADR-0005), report generation, share.
+6. Loss-adjusting template — the decoupling test.
+7. Failure tolerance: chunk retry with local queue, malformed-output reprompt,
+   network-drop reconciliation.
+
+Admin items from the previous entry are unchanged and still time-sensitive.
+
+---
+
 ## 2026-08-05 — repo scaffolded
 
 **Done**

@@ -1,0 +1,13 @@
+{
+  "case_id": "M04-sufficient-named-and-adherence",
+  "item": {
+    "id": "M04",
+    "prompt": "Current medications and adherence",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer records the medications currently taken by name or class, and whether they are taken as prescribed. 'The usual', 'my tablets' or a count of boxes is not sufficient.",
+  "utterance": "I'm on ramipril and atorvastatin, and the water tablet in the morning. I take them all with breakfast, never miss.",
+  "label": "sufficient",
+  "why": "Named medications plus adherence."
+}

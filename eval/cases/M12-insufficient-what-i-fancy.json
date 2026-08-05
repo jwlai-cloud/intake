@@ -1,0 +1,13 @@
+{
+  "case_id": "M12-insufficient-what-i-fancy",
+  "item": {
+    "id": "M12",
+    "prompt": "Nutrition and unintentional weight change",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer records appetite and whether weight has changed unintentionally, with an approximate amount or clothing-fit change if weight has altered. 'I eat what I fancy' alone is not sufficient.",
+  "utterance": "I eat what I fancy. Always have.",
+  "label": "insufficient",
+  "why": "Appetite implied at best; weight change not covered."
+}

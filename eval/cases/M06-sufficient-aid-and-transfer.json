@@ -1,0 +1,13 @@
+{
+  "case_id": "M06-sufficient-aid-and-transfer",
+  "item": {
+    "id": "M06",
+    "prompt": "Mobility and transfers",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer records how the person moves about indoors, any walking aid used, and whether help is needed to transfer from bed or chair. 'I get about all right' is not sufficient.",
+  "utterance": "I use the frame indoors. I can get out of the chair myself if it's the high one, but my daughter has to help me up off the bed in the morning.",
+  "label": "sufficient",
+  "why": "Indoor mobility, aid, and transfer help all recorded."
+}

@@ -1,0 +1,13 @@
+{
+  "case_id": "M20-sufficient-steps-and-stairs",
+  "item": {
+    "id": "M20",
+    "prompt": "Home access and hazards",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer records how the person enters the property, including steps or a lift, and whether stairs must be climbed inside. 'It's a normal house' is not sufficient.",
+  "utterance": "Two steps up to the front door, no rail on them. Bathroom's upstairs so I do the stairs four or five times a day.",
+  "label": "sufficient",
+  "why": "Entry with steps, and internal stairs, both recorded."
+}

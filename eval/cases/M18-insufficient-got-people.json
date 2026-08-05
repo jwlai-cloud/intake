@@ -1,0 +1,14 @@
+{
+  "case_id": "M18-insufficient-got-people",
+  "item": {
+    "id": "M18",
+    "prompt": "Informal support arrangements",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer records who provides informal help, in what relationship, and how often. Record relationship only \u2014 never a name. 'I've got people' is not sufficient.",
+  "utterance": "Oh, I've got people. I'm not on my own, don't you worry.",
+  "label": "insufficient",
+  "why": "No relationship and no frequency. Reassurance, not an answer.",
+  "demo": true
+}

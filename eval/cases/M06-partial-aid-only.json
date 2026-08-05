@@ -1,0 +1,13 @@
+{
+  "case_id": "M06-partial-aid-only",
+  "item": {
+    "id": "M06",
+    "prompt": "Mobility and transfers",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer records how the person moves about indoors, any walking aid used, and whether help is needed to transfer from bed or chair. 'I get about all right' is not sufficient.",
+  "utterance": "I've got a stick, I use it round the house.",
+  "label": "insufficient",
+  "why": "Aid recorded; transfers from bed or chair not covered."
+}

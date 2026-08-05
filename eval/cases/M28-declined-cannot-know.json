@@ -1,0 +1,13 @@
+{
+  "case_id": "M28-declined-cannot-know",
+  "item": {
+    "id": "M28",
+    "prompt": "Equipment currently in place at home",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer lists the equipment in place and where it is fitted. 'They put some bits in' is not sufficient.",
+  "utterance": "I genuinely don't know and there's no way for me to find out \u2014 the occupational therapist fitted it all while I was in hospital and I've no paperwork.",
+  "label": "declined",
+  "why": "Clear unable-to-answer with no route to the information."
+}

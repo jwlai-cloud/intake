@@ -1,0 +1,13 @@
+{
+  "case_id": "M12-sufficient-appetite-and-loss",
+  "item": {
+    "id": "M12",
+    "prompt": "Nutrition and unintentional weight change",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer records appetite and whether weight has changed unintentionally, with an approximate amount or clothing-fit change if weight has altered. 'I eat what I fancy' alone is not sufficient.",
+  "utterance": "Appetite's poor since Christmas. My skirts are hanging off me \u2014 maybe a stone.",
+  "label": "sufficient",
+  "why": "Appetite plus an approximate unintentional loss."
+}

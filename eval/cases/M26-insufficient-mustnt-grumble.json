@@ -1,0 +1,15 @@
+{
+  "case_id": "M26-insufficient-mustnt-grumble",
+  "item": {
+    "id": "M26",
+    "prompt": "Low mood in the last two weeks",
+    "answer_type": "structured",
+    "required": true,
+    "high_risk": true,
+    "accepts_declined": true
+  },
+  "guidance": "A sufficient answer records whether low mood has been present in the last two weeks and, if so, roughly how often. A formal decline is a valid resolution and must be recorded as declined, not as an answer. Offer no suggested wording for this item.",
+  "utterance": "Mustn't grumble. There's people worse off than me.",
+  "label": "insufficient",
+  "why": "Neither a report of low mood nor a refusal. Deflection."
+}

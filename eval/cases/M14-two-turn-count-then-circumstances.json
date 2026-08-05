@@ -1,0 +1,17 @@
+{
+  "case_id": "M14-two-turn-count-then-circumstances",
+  "item": {
+    "id": "M14",
+    "prompt": "Falls in the last 12 months",
+    "answer_type": "structured",
+    "required": true,
+    "high_risk": true
+  },
+  "guidance": "A sufficient answer records the number of falls and the circumstances of the most recent occurrence. Vague quantifiers such as 'a few', 'some' or 'a couple of wobbles' are not sufficient.",
+  "turns": [
+    "Three times since Christmas.",
+    "The last one was in May \u2014 I slipped coming down the stairs in my slippers."
+  ],
+  "label": "sufficient",
+  "why": "Count then circumstances across two turns."
+}

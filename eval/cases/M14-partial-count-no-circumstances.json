@@ -1,0 +1,14 @@
+{
+  "case_id": "M14-partial-count-no-circumstances",
+  "item": {
+    "id": "M14",
+    "prompt": "Falls in the last 12 months",
+    "answer_type": "structured",
+    "required": true,
+    "high_risk": true
+  },
+  "guidance": "A sufficient answer records the number of falls and the circumstances of the most recent occurrence. Vague quantifiers such as 'a few', 'some' or 'a couple of wobbles' are not sufficient.",
+  "utterance": "Three times since Christmas.",
+  "label": "insufficient",
+  "why": "Count recorded; circumstances of the most recent are missing."
+}

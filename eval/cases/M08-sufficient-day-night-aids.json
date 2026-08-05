@@ -1,0 +1,14 @@
+{
+  "case_id": "M08-sufficient-day-night-aids",
+  "item": {
+    "id": "M08",
+    "prompt": "Continence",
+    "answer_type": "structured",
+    "required": true,
+    "accepts_declined": true
+  },
+  "guidance": "A sufficient answer records continence status by day and by night, and any aids used. A formal decline is a valid resolution and must be recorded as declined, not as an answer.",
+  "utterance": "Dry in the day, no trouble. At night I wear a pad, two or three nights a week.",
+  "label": "sufficient",
+  "why": "Day, night and aid all recorded."
+}

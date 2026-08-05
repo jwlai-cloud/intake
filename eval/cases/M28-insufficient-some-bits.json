@@ -1,0 +1,13 @@
+{
+  "case_id": "M28-insufficient-some-bits",
+  "item": {
+    "id": "M28",
+    "prompt": "Equipment currently in place at home",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer lists the equipment in place and where it is fitted. 'They put some bits in' is not sufficient.",
+  "utterance": "They put some bits in after the hospital. All sorts, really.",
+  "label": "insufficient",
+  "why": "No items and no locations."
+}

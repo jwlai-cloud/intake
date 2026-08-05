@@ -1,0 +1,13 @@
+{
+  "case_id": "M22-sufficient-site-and-limit",
+  "item": {
+    "id": "M22",
+    "prompt": "Pain",
+    "answer_type": "structured",
+    "required": true
+  },
+  "guidance": "A sufficient answer records whether pain is present, its site, and either a severity rating or a description of how it limits activity. 'Aches and pains, at my age' is not sufficient.",
+  "utterance": "My left hip, mostly. It's bad enough that I can't stand at the sink to wash up for more than a minute or two.",
+  "label": "sufficient",
+  "why": "Presence, site, and functional limitation."
+}
