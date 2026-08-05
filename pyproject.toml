@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "Answer-level coverage tracking for mandated professional interviews"
 requires-python = ">=3.11"
 dependencies = [
-    "google-genai==1.50.1",
+    "google-genai>=2.9,<3",
+    "google-adk==2.6.2",
+    "google-cloud-firestore>=2.19",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
 ]
 
 [tool.uv]
@@ -13,9 +17,11 @@ package = false
 [dependency-groups]
 dev = [
     "pytest>=8",
+    "pytest-asyncio>=0.24",
     "httpx>=0.27",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
 pythonpath = ["backend"]
+asyncio_mode = "auto"
