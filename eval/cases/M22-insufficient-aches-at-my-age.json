@@ -1,12 +1,7 @@
 {
   "case_id": "M22-insufficient-aches-at-my-age",
-  "item": {
-    "id": "M22",
-    "prompt": "Pain",
-    "answer_type": "structured",
-    "required": true
-  },
-  "guidance": "A sufficient answer records whether pain is present, its site, and either a severity rating or a description of how it limits activity. 'Aches and pains, at my age' is not sufficient.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M22",
   "utterance": "Aches and pains, at my age. You get used to it.",
   "label": "insufficient",
   "why": "No site, no severity, no limitation."

@@ -1,14 +1,8 @@
 {
   "case_id": "M10-insufficient-i-think-fine",
-  "item": {
-    "id": "M10",
-    "prompt": "Skin integrity and pressure areas",
-    "answer_type": "structured",
-    "required": true,
-    "high_risk": true
-  },
-  "guidance": "A sufficient answer records whether any broken skin, sore or red area is present, and if so its site. 'My skin's fine I think' with no site check is not sufficient.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M10",
   "utterance": "My skin's fine, I think. I haven't really looked.",
   "label": "insufficient",
-  "why": "Unverified self-report, no site checked. High-risk item \u2014 no suggested answer."
+  "why": "Unverified self-report, no site checked. High-risk item — no suggested answer."
 }

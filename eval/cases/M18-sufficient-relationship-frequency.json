@@ -1,12 +1,7 @@
 {
   "case_id": "M18-sufficient-relationship-frequency",
-  "item": {
-    "id": "M18",
-    "prompt": "Informal support arrangements",
-    "answer_type": "structured",
-    "required": true
-  },
-  "guidance": "A sufficient answer records who provides informal help, in what relationship, and how often. Record relationship only \u2014 never a name. 'I've got people' is not sufficient.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M18",
   "utterance": "My daughter does the big shop on Saturdays and my neighbour looks in most evenings to check on me.",
   "label": "sufficient",
   "why": "Relationships and frequency recorded, no names used."

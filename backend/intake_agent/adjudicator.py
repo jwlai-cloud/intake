@@ -19,6 +19,8 @@ from functools import lru_cache
 from google import genai
 from google.genai import types
 
+from .template import Item
+
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
 SYSTEM_INSTRUCTION = """\
@@ -108,29 +110,28 @@ def get_client() -> genai.Client:
     )
 
 
-def _prompt(item: dict, guidance: str, turns: list[str]) -> str:
+def _prompt(item: Item, turns: list[str]) -> str:
     transcript = "\n".join(f"- {t}" for t in turns)
     return (
-        f"ITEM {item['id']}: {item['prompt']}\n"
-        f"answer_type: {item.get('answer_type', 'free_text')}\n"
-        f"accepts_declined: {bool(item.get('accepts_declined', False))}\n\n"
-        f"GUIDANCE:\n{guidance}\n\n"
+        f"ITEM {item.id}: {item.prompt}\n"
+        f"answer_type: {item.answer_type}\n"
+        f"accepts_declined: {item.accepts_declined}\n\n"
+        f"GUIDANCE:\n{item.guidance}\n\n"
         f"TRANSCRIPT (interviewee turns, in order):\n{transcript}\n"
     )
 
 
 def adjudicate(
-    item: dict,
-    guidance: str,
+    item: Item,
     turns: list[str],
     *,
     model: str = DEFAULT_MODEL,
     client: genai.Client | None = None,
 ) -> Verdict:
-    """Adjudicate one item against the turns heard so far."""
+    """Adjudicate one template item against the turns heard so far."""
     resp = (client or get_client()).models.generate_content(
         model=model,
-        contents=_prompt(item, guidance, turns),
+        contents=_prompt(item, turns),
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_INSTRUCTION,
             temperature=0,

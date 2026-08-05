@@ -1,13 +1,7 @@
 {
   "case_id": "M24-declined-explicit",
-  "item": {
-    "id": "M24",
-    "prompt": "Alcohol intake",
-    "answer_type": "structured",
-    "required": true,
-    "accepts_declined": true
-  },
-  "guidance": "A sufficient answer records units or drinks per week, or a clear statement of abstinence. A formal decline is a valid resolution and must be recorded as declined, not as an answer.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M24",
   "utterance": "That's my own business, thank you. Put down that I'd rather not say.",
   "label": "declined",
   "why": "Explicit refusal; the item accepts a formal decline."

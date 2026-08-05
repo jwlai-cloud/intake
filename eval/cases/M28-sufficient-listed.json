@@ -1,12 +1,7 @@
 {
   "case_id": "M28-sufficient-listed",
-  "item": {
-    "id": "M28",
-    "prompt": "Equipment currently in place at home",
-    "answer_type": "structured",
-    "required": true
-  },
-  "guidance": "A sufficient answer lists the equipment in place and where it is fitted. 'They put some bits in' is not sufficient.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M28",
   "utterance": "There's a grab rail by the front door, a raised toilet seat upstairs, and a perching stool in the kitchen.",
   "label": "sufficient",
   "why": "Equipment listed with locations."

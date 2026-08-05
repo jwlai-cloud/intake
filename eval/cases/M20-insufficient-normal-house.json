@@ -1,12 +1,7 @@
 {
   "case_id": "M20-insufficient-normal-house",
-  "item": {
-    "id": "M20",
-    "prompt": "Home access and hazards",
-    "answer_type": "structured",
-    "required": true
-  },
-  "guidance": "A sufficient answer records how the person enters the property, including steps or a lift, and whether stairs must be climbed inside. 'It's a normal house' is not sufficient.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M20",
   "utterance": "It's a normal house, nothing special about it.",
   "label": "insufficient",
   "why": "Neither entry nor internal stairs recorded."

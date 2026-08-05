@@ -1,14 +1,8 @@
 {
   "case_id": "M08-insufficient-deflection",
-  "item": {
-    "id": "M08",
-    "prompt": "Continence",
-    "answer_type": "structured",
-    "required": true,
-    "accepts_declined": true
-  },
-  "guidance": "A sufficient answer records continence status by day and by night, and any aids used. A formal decline is a valid resolution and must be recorded as declined, not as an answer.",
-  "utterance": "Well, everyone has the odd accident, don't they. Anyway, about the stairs \u2014",
+  "template_id": "community-nursing-v1",
+  "item_id": "M08",
+  "utterance": "Well, everyone has the odd accident, don't they. Anyway, about the stairs —",
   "label": "insufficient",
   "why": "Deflection and a change of subject. Not a refusal, so not declined."
 }

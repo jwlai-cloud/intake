@@ -52,6 +52,7 @@ def main() -> int:
 
     load_dotenv()
     from intake_agent.adjudicator import DEFAULT_MODEL, adjudicate, get_client
+    from intake_agent.template import Template
 
     model = args.model or DEFAULT_MODEL
     # Build the client up front: constructing it inside worker threads races and
@@ -60,7 +61,7 @@ def main() -> int:
 
     cases = [json.loads(p.read_text()) for p in sorted(CASES.glob("*.json"))]
     if args.item:
-        cases = [c for c in cases if c["item"]["id"] == args.item]
+        cases = [c for c in cases if c["item_id"] == args.item]
     if args.demo:
         cases = [c for c in cases if c.get("demo")]
     if not cases:
@@ -71,8 +72,10 @@ def main() -> int:
 
     def run(case: dict):
         try:
-            v = adjudicate(case["item"], case["guidance"], turns_of(case),
-                           model=model, client=client)
+            # Item and guidance come from the template, never from the case file:
+            # duplicating them per case let two M14 cases drift apart once already.
+            item = Template.load(case["template_id"])[case["item_id"]]
+            v = adjudicate(item, turns_of(case), model=model, client=client)
             return case, v, None
         except Exception as exc:  # a crashed call must not read as a pass
             return case, None, exc

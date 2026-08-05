@@ -14,7 +14,7 @@ from intake_agent.adjudicator import Verdict
 
 
 def fake_adjudicate(verdict: str):
-    def _adj(item, guidance, turns, *, model=None, client=None):
+    def _adj(item, turns, *, model=None, client=None):
         return Verdict(verdict=verdict, evidence=turns[0], missing=(), reason="stub")
     return _adj
 

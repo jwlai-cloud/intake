@@ -1,14 +1,7 @@
 {
   "case_id": "M26-declined-explicit",
-  "item": {
-    "id": "M26",
-    "prompt": "Low mood in the last two weeks",
-    "answer_type": "structured",
-    "required": true,
-    "high_risk": true,
-    "accepts_declined": true
-  },
-  "guidance": "A sufficient answer records whether low mood has been present in the last two weeks and, if so, roughly how often. A formal decline is a valid resolution and must be recorded as declined, not as an answer. Offer no suggested wording for this item.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M26",
   "utterance": "I don't want to talk about that side of things today.",
   "label": "declined",
   "why": "Explicit refusal on a high-risk item that accepts a decline."

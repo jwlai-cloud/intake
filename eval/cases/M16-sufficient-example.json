@@ -1,13 +1,7 @@
 {
   "case_id": "M16-sufficient-example",
-  "item": {
-    "id": "M16",
-    "prompt": "Memory and orientation concerns",
-    "answer_type": "structured",
-    "required": true,
-    "high_risk": true
-  },
-  "guidance": "A sufficient answer records whether the person or those around them have noticed memory difficulty, and at least one concrete example or a clear statement that there is none. A joke about forgetfulness is not sufficient.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M16",
   "utterance": "My son says I repeat myself. Last week I left the gas on twice in one day.",
   "label": "sufficient",
   "why": "Concern noticed plus a concrete example."

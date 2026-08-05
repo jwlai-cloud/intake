@@ -1,16 +1,11 @@
 {
   "case_id": "M02-two-turn-onset-then-cause",
-  "item": {
-    "id": "M02",
-    "prompt": "Reason for referral in the person's own words",
-    "answer_type": "free_text",
-    "required": true
-  },
-  "guidance": "A sufficient answer records what prompted the referral and roughly when the difficulty began. 'I'm not sure' or a restatement of the referral source alone is not sufficient.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M02",
   "turns": [
     "Since about February, I'd say.",
     "It's the breathlessness. I can't manage the walk to the shop any more."
   ],
   "label": "sufficient",
-  "why": "Onset in turn one, difficulty in turn two \u2014 combined they satisfy."
+  "why": "Onset in turn one, difficulty in turn two — combined they satisfy."
 }

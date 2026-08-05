@@ -1,0 +1,202 @@
+{
+  "template_id": "community-nursing-v1",
+  "title": "Community nursing · home visit",
+  "subtitle": "Required assessment",
+  "source": "Synthetic. Derived from published community-nursing assessment standards. Not any employer's form.",
+  "sections": [
+    {
+      "id": "referral",
+      "title": "Referral",
+      "items": [
+        {
+          "id": "M02",
+          "prompt": "Reason for referral in the person's own words",
+          "required": true,
+          "answer_type": "free_text",
+          "guidance_ref": "§1.1",
+          "guidance": "A sufficient answer records what prompted the referral and roughly when the difficulty began. 'I'm not sure' or a restatement of the referral source alone is not sufficient."
+        }
+      ]
+    },
+    {
+      "id": "medication",
+      "title": "Medication",
+      "items": [
+        {
+          "id": "M04",
+          "prompt": "Current medications and adherence",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§2.3",
+          "guidance": "A sufficient answer records the medications currently taken by name or class, and whether they are taken as prescribed. 'The usual', 'my tablets' or a count of boxes is not sufficient."
+        },
+        {
+          "id": "M05",
+          "prompt": "Who sets out the medication, and how",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§2.4",
+          "guidance": "A sufficient answer records who prepares the doses and whether a dosette box or blister pack is used.",
+          "depends_on": {
+            "item": "M04",
+            "when": "answered_and_matches",
+            "pattern": "(?i)forget|miss|not sure|help|someone"
+          }
+        }
+      ]
+    },
+    {
+      "id": "mobility",
+      "title": "Mobility and falls",
+      "items": [
+        {
+          "id": "M06",
+          "prompt": "Mobility and transfers",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§3.1",
+          "guidance": "A sufficient answer records how the person moves about indoors, any walking aid used, and whether help is needed to transfer from bed or chair. 'I get about all right' is not sufficient."
+        },
+        {
+          "id": "M14",
+          "prompt": "Falls in the last 12 months",
+          "required": true,
+          "answer_type": "structured",
+          "high_risk": true,
+          "guidance_ref": "§3.4",
+          "guidance": "A sufficient answer records the number of falls and the circumstances of the most recent occurrence. Vague quantifiers such as 'a few', 'some' or 'a couple of wobbles' are not sufficient."
+        },
+        {
+          "id": "M15",
+          "prompt": "Injury sustained in the most recent fall, and whether it was seen by a clinician",
+          "required": true,
+          "answer_type": "structured",
+          "high_risk": true,
+          "guidance_ref": "§3.5",
+          "guidance": "A sufficient answer records any injury and whether it was assessed by a clinician. Only applies where a fall has been recorded.",
+          "depends_on": {
+            "item": "M14",
+            "when": "answered_and_matches",
+            "pattern": "(?i)\\b(one|two|three|four|five|six|seven|eight|nine|ten|[1-9][0-9]*)\\b"
+          }
+        }
+      ]
+    },
+    {
+      "id": "personal-care",
+      "title": "Personal care",
+      "items": [
+        {
+          "id": "M08",
+          "prompt": "Continence",
+          "required": true,
+          "answer_type": "structured",
+          "accepts_declined": true,
+          "guidance_ref": "§4.2",
+          "guidance": "A sufficient answer records continence status by day and by night, and any aids used. A formal decline is a valid resolution and must be recorded as declined, not as an answer."
+        },
+        {
+          "id": "M10",
+          "prompt": "Skin integrity and pressure areas",
+          "required": true,
+          "answer_type": "structured",
+          "high_risk": true,
+          "guidance_ref": "§4.5",
+          "guidance": "A sufficient answer records whether any broken skin, sore or red area is present, and if so its site. 'My skin's fine I think' with no site check is not sufficient."
+        }
+      ]
+    },
+    {
+      "id": "nutrition",
+      "title": "Nutrition",
+      "items": [
+        {
+          "id": "M12",
+          "prompt": "Nutrition and unintentional weight change",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§5.1",
+          "guidance": "A sufficient answer records appetite and whether weight has changed unintentionally, with an approximate amount or clothing-fit change if weight has altered. 'I eat what I fancy' alone is not sufficient."
+        }
+      ]
+    },
+    {
+      "id": "cognition-mood",
+      "title": "Cognition and mood",
+      "items": [
+        {
+          "id": "M16",
+          "prompt": "Memory and orientation concerns",
+          "required": true,
+          "answer_type": "structured",
+          "high_risk": true,
+          "guidance_ref": "§6.2",
+          "guidance": "A sufficient answer records whether the person or those around them have noticed memory difficulty, and at least one concrete example or a clear statement that there is none. A joke about forgetfulness is not sufficient."
+        },
+        {
+          "id": "M26",
+          "prompt": "Low mood in the last two weeks",
+          "required": true,
+          "answer_type": "structured",
+          "high_risk": true,
+          "accepts_declined": true,
+          "guidance_ref": "§6.6",
+          "guidance": "A sufficient answer records whether low mood has been present in the last two weeks and, if so, roughly how often. A formal decline is a valid resolution and must be recorded as declined, not as an answer. Offer no suggested wording for this item."
+        }
+      ]
+    },
+    {
+      "id": "support",
+      "title": "Support and environment",
+      "items": [
+        {
+          "id": "M18",
+          "prompt": "Informal support arrangements",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§7.1",
+          "guidance": "A sufficient answer records who provides informal help, in what relationship, and how often. Record relationship only — never a name. 'I've got people' is not sufficient."
+        },
+        {
+          "id": "M20",
+          "prompt": "Home access and hazards",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§7.4",
+          "guidance": "A sufficient answer records how the person enters the property, including steps or a lift, and whether stairs must be climbed inside. 'It's a normal house' is not sufficient."
+        },
+        {
+          "id": "M28",
+          "prompt": "Equipment currently in place at home",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§7.8",
+          "guidance": "A sufficient answer lists the equipment in place and where it is fitted. 'They put some bits in' is not sufficient."
+        }
+      ]
+    },
+    {
+      "id": "wellbeing",
+      "title": "Pain and lifestyle",
+      "items": [
+        {
+          "id": "M22",
+          "prompt": "Pain",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§8.1",
+          "guidance": "A sufficient answer records whether pain is present, its site, and either a severity rating or a description of how it limits activity. 'Aches and pains, at my age' is not sufficient."
+        },
+        {
+          "id": "M24",
+          "prompt": "Alcohol intake",
+          "required": true,
+          "answer_type": "structured",
+          "accepts_declined": true,
+          "guidance_ref": "§8.5",
+          "guidance": "A sufficient answer records units or drinks per week, or a clear statement of abstinence. A formal decline is a valid resolution and must be recorded as declined, not as an answer."
+        }
+      ]
+    }
+  ]
+}

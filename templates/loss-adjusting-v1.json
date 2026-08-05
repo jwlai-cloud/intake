@@ -1,0 +1,120 @@
+{
+  "template_id": "loss-adjusting-v1",
+  "title": "Property damage · loss adjuster site visit",
+  "subtitle": "Required inspection record",
+  "source": "Synthetic. Derived from published property-claim inspection standards. Not any insurer's form.",
+  "sections": [
+    {
+      "id": "incident",
+      "title": "The incident",
+      "items": [
+        {
+          "id": "L01",
+          "prompt": "Date and time the damage was first discovered",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§1.1",
+          "guidance": "A sufficient answer records a date, and either a time or a part of the day. 'A few weeks back' or 'recently' is not sufficient."
+        },
+        {
+          "id": "L02",
+          "prompt": "Cause of loss as described by the policyholder",
+          "required": true,
+          "answer_type": "free_text",
+          "guidance_ref": "§1.3",
+          "guidance": "A sufficient answer records what the policyholder believes caused the damage and what they observed. 'It just happened' is not sufficient. Record the account given; do not assess whether it is plausible."
+        },
+        {
+          "id": "L03",
+          "prompt": "Whether the escape of water has been isolated, and by whom",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§1.6",
+          "guidance": "A sufficient answer records whether the leak is stopped and who stopped it — the policyholder, a plumber, or nobody yet.",
+          "depends_on": {
+            "item": "L02",
+            "when": "answered_and_matches",
+            "pattern": "(?i)water|leak|pipe|tank|flood|burst|overflow"
+          }
+        }
+      ]
+    },
+    {
+      "id": "extent",
+      "title": "Extent of damage",
+      "items": [
+        {
+          "id": "L05",
+          "prompt": "Rooms affected and the extent in each",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§2.1",
+          "guidance": "A sufficient answer names each affected room and describes what is damaged in it. 'Downstairs is a mess' is not sufficient."
+        },
+        {
+          "id": "L07",
+          "prompt": "Damage to the building structure",
+          "required": true,
+          "answer_type": "structured",
+          "high_risk": true,
+          "guidance_ref": "§2.4",
+          "guidance": "A sufficient answer records whether floors, walls, ceilings or joists are affected, and where. This item carries a structural-safety implication: record the observation only and do not offer a suggested wording."
+        },
+        {
+          "id": "L09",
+          "prompt": "Contents damaged, with approximate age and condition before the loss",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§2.7",
+          "guidance": "A sufficient answer lists the damaged contents and gives approximate age or condition for each. A bare list with no age or condition is not sufficient."
+        }
+      ]
+    },
+    {
+      "id": "mitigation",
+      "title": "Mitigation and occupancy",
+      "items": [
+        {
+          "id": "L11",
+          "prompt": "Steps taken to prevent further damage",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§3.2",
+          "guidance": "A sufficient answer records what was done, by whom, and roughly when. 'We sorted it' is not sufficient."
+        },
+        {
+          "id": "L13",
+          "prompt": "Whether the property remains habitable",
+          "required": true,
+          "answer_type": "structured",
+          "high_risk": true,
+          "guidance_ref": "§3.5",
+          "guidance": "A sufficient answer records whether the property is currently lived in and which facilities are unusable. Offer no suggested wording: habitability drives an alternative-accommodation decision and must be the adjuster's own words."
+        }
+      ]
+    },
+    {
+      "id": "claim-admin",
+      "title": "Claim administration",
+      "items": [
+        {
+          "id": "L15",
+          "prompt": "Previous claims on this property",
+          "required": true,
+          "answer_type": "structured",
+          "accepts_declined": true,
+          "guidance_ref": "§4.1",
+          "guidance": "A sufficient answer records previous claims with approximate dates, or a clear statement that there are none. A formal decline is a valid resolution and must be recorded as declined, not as an answer."
+        },
+        {
+          "id": "L17",
+          "prompt": "Photographs taken on site",
+          "required": true,
+          "answer_type": "structured",
+          "guidance_ref": "§4.4",
+          "guidance": "A sufficient answer records what has been photographed, by room or by item. 'Got some pictures' is not sufficient."
+        }
+      ]
+    }
+  ]
+}

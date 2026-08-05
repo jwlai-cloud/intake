@@ -1,13 +1,7 @@
 {
   "case_id": "M24-sufficient-units",
-  "item": {
-    "id": "M24",
-    "prompt": "Alcohol intake",
-    "answer_type": "structured",
-    "required": true,
-    "accepts_declined": true
-  },
-  "guidance": "A sufficient answer records units or drinks per week, or a clear statement of abstinence. A formal decline is a valid resolution and must be recorded as declined, not as an answer.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M24",
   "utterance": "A glass of sherry on a Sunday and that's it. So one drink a week.",
   "label": "sufficient",
   "why": "Weekly quantity recorded."

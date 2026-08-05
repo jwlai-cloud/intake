@@ -1,13 +1,7 @@
 {
   "case_id": "M14-vague-wobbles",
-  "item": {
-    "id": "M14",
-    "prompt": "Falls in the last 12 months",
-    "answer_type": "structured",
-    "required": true,
-    "high_risk": true
-  },
-  "guidance": "A sufficient answer records the number of falls and the circumstances of the most recent occurrence. Vague quantifiers such as 'a few', 'some' or 'a couple of wobbles' are not sufficient.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M14",
   "utterance": "Oh, I've had a couple of wobbles.",
   "label": "insufficient",
   "why": "No count, no circumstances. Mentioned, not answered.",

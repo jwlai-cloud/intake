@@ -1,13 +1,7 @@
 {
   "case_id": "M10-sufficient-site-recorded",
-  "item": {
-    "id": "M10",
-    "prompt": "Skin integrity and pressure areas",
-    "answer_type": "structured",
-    "required": true,
-    "high_risk": true
-  },
-  "guidance": "A sufficient answer records whether any broken skin, sore or red area is present, and if so its site. 'My skin's fine I think' with no site check is not sufficient.",
+  "template_id": "community-nursing-v1",
+  "item_id": "M10",
   "utterance": "There's a red patch at the base of my spine, it's been there a fortnight. Nothing broken anywhere else.",
   "label": "sufficient",
   "why": "Presence and site both recorded."
