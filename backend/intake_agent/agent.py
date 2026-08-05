@@ -35,6 +35,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from .adjudicator import DEFAULT_MODEL, adjudicate
+from .router import route
 from .store import ANSWERED, BaseStore, SessionState
 
 log = logging.getLogger(__name__)
@@ -173,12 +174,21 @@ class AdjudicationAgent(BaseAgent):
         if turns and open_items:
             session = self.store.append_turns(session_id, turns)
             heard = session.recent_turns
+
+            # Route before adjudicating: one small call decides which items this
+            # chunk is even about, so a remark about falls is not judged against
+            # continence and cannot leave its quote there.
+            relevant = await asyncio.to_thread(
+                route, open_items, turns, model=self.model)
+            log.info("chunk routed to %d of %d open items: %s",
+                     len(relevant), len(open_items), [i.id for i in relevant])
+
             verdicts = await asyncio.gather(*[
                 asyncio.to_thread(adjudicate, item, heard, model=self.model)
-                for item in open_items
+                for item in relevant
             ], return_exceptions=True)
 
-            for item, verdict in zip(open_items, verdicts):
+            for item, verdict in zip(relevant, verdicts):
                 if isinstance(verdict, Exception):
                     # One item failing must not lose the whole chunk. The item
                     # simply stays open and the next chunk retries it.
