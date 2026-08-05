@@ -1,0 +1,29 @@
+# Real client/employer material — NEVER commit
+templates/private/
+*.private.json
+docs/private/
+
+# Secrets
+.env
+.env.*
+!.env.example
+service-account*.json
+*-key.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
