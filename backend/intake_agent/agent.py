@@ -184,6 +184,8 @@ class AdjudicationAgent(BaseAgent):
                     # simply stays open and the next chunk retries it.
                     log.warning("adjudication failed for %s: %s", item.id, verdict)
                     continue
+                if not verdict.addressed:
+                    continue  # this chunk said nothing about the item
                 self.store.apply_verdict(
                     session_id, item.id, verdict.verdict,
                     value=verdict.evidence, evidence=verdict.evidence,

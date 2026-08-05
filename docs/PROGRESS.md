@@ -5,6 +5,102 @@ entry at the top.
 
 ---
 
+## 2026-08-05 (late) — all components built, end to end on live Vertex AI
+
+**Eval: 35/35. Precision on `sufficient` 100%, recall 100%. Backend suite: 45
+tests, no network.** Stable across repeated runs at `temperature=0`.
+
+Branch `dev`. Not yet deployed to Cloud Run; everything else runs.
+
+**Done**
+
+- **Template engine** (`template.py`) + two synthetic verticals, community
+  nursing (14 required items) and loss adjusting (10). `depends_on` is a closed
+  condition set, not an expression language, and required-ness is recomputed
+  after every chunk. `test_second_template_needs_no_code_change` is ADR-0003's
+  claim made falsifiable.
+- **Eval cases now reference the template** by `template_id` + `item_id`. Two
+  M14 cases had already drifted to different guidance text; that is now
+  structurally impossible.
+- **ADK pipeline** (`agent.py`): `SequentialAgent` of transcriber (LlmAgent) →
+  adjudication (custom `BaseAgent`, fans out one call per open item) → coach
+  (LlmAgent). Plus `Escalator`, which drafts and files the follow-up action.
+- **Session store** (`store.py`): Firestore document per session, slots as a
+  map, `partial` as a first-class state. In-memory fallback behind a real
+  round-trip probe.
+- **HTTP service** (`main.py`): sessions, chunks, resolve, highlights, report.
+  Gate returns 409 *with* the outstanding items and whether each may be
+  declined. Shared-secret header, 8MB audio cap, replay-safe chunk claims,
+  degraded-but-alive on turn failure.
+- **Report** (`report.py`): assembled deterministically, no model call — the
+  agent authoring the prose is exactly what ADR-0006 forbids.
+- **React front end** (`web/`): the prototype's CSS ported verbatim, mic capture
+  at 18s chunks, local queue with in-order replay, live coverage, gate modal
+  with all three resolutions, editable report. Typed-input path drives the same
+  pipeline for noisy rooms and for demos without a microphone.
+- **Cloud Run**: `backend/Dockerfile`, pinned `requirements.txt`, `deploy.sh`
+  that stages `templates/` into the build context.
+- **Docs**: ARCHITECTURE rewritten to current state, ADR-0008 (ADK), ADR-0009
+  (Firestore shape + fallback), LEARNING corrected and extended, README spin-up
+  rewritten and its architecture diagram corrected.
+
+**Verified live, not just mocked**
+
+A chunk containing *"oh, I've had a couple of wobbles"* leaves M14 **partial**
+with the quote attached, coverage 1 of 14, and generates the next question
+*"Roughly when did these wobbles first start?"*. The gate refuses the report
+with the outstanding list. Escalating M20 with no reason had the agent draft the
+follow-up and route it to the Occupational therapy queue. That is the whole
+product working against real Vertex AI.
+
+**Corrections to previously recorded beliefs**
+
+- `CLAUDE.md` said ADK 2.x agents subclass `BaseNode`. They subclass
+  `BaseAgent`. `BaseNode` belongs to the separate `google.adk.workflow` graph
+  API. Corrected in CLAUDE.md, LEARNING.md, and ADR-0008.
+- `google-adk==2.6.2` requires `google-genai>=2.9,<3`, so the `1.50.1` pin from
+  the previous session was incompatible. Now on 2.16.0; eval re-scored after
+  the bump.
+- LEARNING.md claimed one Gemini call per chunk would do everything. The build
+  deliberately does not — see the corrected section there for why.
+
+**Known issues, in the order they should be fixed**
+
+1. **Evidence bleed.** A vague utterance about falls gets attached as
+   `evidence` to unrelated items — M02, M06, M16, M26 all claimed the "wobbles"
+   quote. Adding the `addressed` boolean cut it from 7 items to 5; it did not
+   solve it. Every open item independently judges relevance against the same
+   turns, and a vague remark is weakly relevant to many. The fix is a routing
+   call: one cheap classification of which items a chunk bears on, then
+   adjudicate only those. That also cuts per-chunk cost from ~14 calls to ~2.
+   Safe direction (nothing is falsely ticked, the gate still holds) but visibly
+   sloppy in the UI, and it must be fixed before recording.
+2. **The eval set has no case the adjudicator fails.** 100% means it cannot
+   currently detect a subtle prompt regression. Add adversarial cases: guidance
+   satisfied in unusual word order, a confident-sounding non-answer, and an
+   interviewee walking back an earlier sufficient answer.
+3. **Not deployed.** Cloud Run deploy is scripted but unrun, and the contest
+   needs visible proof of Google Cloud in the video.
+4. **Firestore is untested against a real native database.** The development project's
+   default database is Datastore mode, so every live run so far used the memory
+   fallback. Create a native database before claiming Firestore on camera.
+5. Practitioner memory (`practitioners/{id}`) is in the schema and not written.
+6. No realtime listener yet — the client uses the POST response. The document
+   shape already supports `onSnapshot`.
+
+**Next, in priority order**
+
+1. Routing call to fix evidence bleed (known issue 1).
+2. Create the native Firestore database; re-run the live walkthrough against it.
+3. Deploy to Cloud Run; capture the dashboard and Vertex logs for the video.
+4. Harden the eval set (known issue 2).
+5. Firestore realtime listener in the client, replacing response-driven updates.
+6. Demo script, and pre-test the two vague phrasings until behaviour is stable.
+
+Admin items from the first entry are unchanged and still time-sensitive.
+
+---
+
 ## 2026-08-05 (evening) — adjudicator and eval harness
 
 **Score: 35/35 cases correct. Precision on `sufficient` 100%, recall 100%.**

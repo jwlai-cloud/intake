@@ -29,12 +29,15 @@ scoped to a job and a practitioner, never to a person.
 from __future__ import annotations
 
 import copy
+import logging
 import os
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from .template import Template
+
+log = logging.getLogger(__name__)
 
 # Slot states. `partial` is the one the competition does not have: the item was
 # discussed but the answer does not satisfy the guidance.
@@ -310,18 +313,29 @@ class FirestoreStore(BaseStore):
     def _save(self, state: SessionState) -> None:
         self._doc(state.session_id).set(state.to_dict())
 
+    def probe(self) -> None:
+        """Round-trip a read so an unusable database fails at startup, not mid-visit."""
+        self._db.collection(self._collection).document("__probe__").get()
+
 
 def default_store() -> BaseStore:
-    """Firestore when a project is configured, memory otherwise.
+    """Firestore when it is actually usable, memory otherwise.
 
-    A demo must never die because a database is unreachable, so the fallback is
-    explicit and logged by the caller rather than an accidental silent default.
+    The probe is a real round trip, not just a successful constructor. A
+    Firestore client builds happily against a project whose default database is
+    in Datastore Mode and only fails on the first write, which would take the
+    demo down mid-interview instead of at startup. Falling back is loud.
     """
     if os.environ.get("INTAKE_STORE", "").lower() == "memory":
         return MemoryStore()
     if not os.environ.get("GOOGLE_CLOUD_PROJECT"):
+        log.warning("no GOOGLE_CLOUD_PROJECT set — using in-memory session store")
         return MemoryStore()
     try:
-        return FirestoreStore()
-    except Exception:
+        store = FirestoreStore()
+        store.probe()
+        return store
+    except Exception as exc:
+        log.warning("Firestore unavailable (%s) — falling back to the in-memory "
+                    "session store. State will not survive a restart.", exc)
         return MemoryStore()

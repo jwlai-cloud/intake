@@ -4,104 +4,152 @@
 stale content, do not append history. Decisions and their reasoning live in
 `docs/adr/`.
 
-Status: scaffolded, not yet implemented. Sections marked _(planned)_ describe
-intended shape.
+Status: **implemented end to end and verified against live Vertex AI.** Not yet
+deployed to Cloud Run.
 
 ## Components
 
-| Component | Tech | Responsibility |
-|---|---|---|
-| Web client | React + Vite | Mic capture, 15–20s chunking, POST; Firestore listener driving the live UI; three-state gate; report edit and share |
-| Agent service | ADK Python 2.6.x on Cloud Run | Per-chunk orchestration; template interpretation; branch evaluation; report generation; follow-up filing |
-| Model | `gemini-3.6-flash` via Vertex AI | Transcription, slot adjudication, next-question generation, highlight extraction — one structured-output call per chunk |
-| State + retrieval | Firestore | Session state, template configs, practitioner style profile, guidance-note index |
+| Component | Tech | Responsibility | State |
+|---|---|---|---|
+| Web client | React 18 + Vite | Mic capture, 18s chunking, local chunk queue, live coverage UI, three-state gate, report edit | Built |
+| Agent service | FastAPI + ADK Python 2.6.2 | HTTP surface, turn orchestration, gate, report assembly | Built |
+| Turn pipeline | ADK `SequentialAgent` | transcribe → adjudicate → coach | Built |
+| Adjudicator | `gemini-3.6-flash` via Vertex AI, schema-constrained | Answer-level judgement, one call per item | Built, 35/35 on eval |
+| Session store | Firestore, with in-memory fallback | Durable slot state, follow-ups, highlights | Built |
+| Templates | JSON config | The entire vertical | Two shipped |
 
 ## Data flow, per audio chunk
 
 ```
 browser mic
-  └─ 15–20s chunk ──POST──▶ Cloud Run (ADK agent)
-                              ├─ load template (open items only)
-                              ├─ load slot state (fixed-size struct)
-                              ├─ retrieve guidance notes for open items
-                              ├─ Vertex AI: one structured-output call
-                              │    → { transcript_span, slot_verdicts,
-                              │        next_question, candidate_flags }
-                              ├─ evaluate depends_on → recompute required set
-                              └─ write Firestore
-                                   └─ realtime listener ──▶ UI updates
+  └─ MediaRecorder, 18s timeslice
+       └─ base64 ──POST /sessions/{id}/chunks {seq, audio_b64}
+             │        (failed posts queue locally and replay in order)
+             ▼
+        Cloud Run · FastAPI
+             ├─ claim_chunk(seq) ──▶ already seen? return current state, no work
+             └─ ADK SequentialAgent "intake_turn"
+                  ├─ 1. transcriber   LlmAgent, audio in → speaker-attributed turns
+                  ├─ 2. adjudication  custom BaseAgent
+                  │       ├─ load open required items from Firestore
+                  │       ├─ fan out: one adjudicate() call per open item, concurrently
+                  │       ├─ discard verdicts marked not-addressed
+                  │       ├─ fold verdicts into slot state, atomically
+                  │       └─ recompute depends_on → the required set changes mid-interview
+                  └─ 3. coach         LlmAgent, reads the brief → next question + highlights
+             ▼
+        Firestore session document
+             └─ returned to the client (a realtime listener can replace the response)
 ```
 
-**The slot state is the state, not the transcript.** Each call carries only the
-open template items, a fixed-size struct of current slot values, and the new
-audio. Context is bounded and roughly constant regardless of interview length.
-See ADR-0002.
+**The slot state is the state, not the transcript** (ADR-0002). The coach never
+sees a transcript — it sees a brief listing open items, what each is missing,
+and this chunk's quotes. Adjudication sees a capped window of the last 12
+interviewee turns, which is what lets an answer arrive across two turns without
+letting context grow without bound. A three-hour interview costs the same per
+chunk as a ten-minute one.
+
+## Why adjudication is not an LlmAgent
+
+It is a custom `BaseAgent` that fans out one constrained call per open item.
+Three reasons, in order of importance:
+
+1. **Isolation.** A wrong verdict on M14 cannot corrupt M06. One prompt judging
+   fourteen items at once has no such guarantee.
+2. **Measurability.** The per-item contract is exactly what `eval/` scores. A
+   combined call would not be scoreable case by case.
+3. **Latency.** Fourteen concurrent calls cost about one call's wall time.
 
 ## Session lifecycle
 
-1. Practitioner selects a template. Required set computed from `required` plus
-   `depends_on` evaluation against an empty slot state.
-2. Recording starts; indicator stays visible for the whole session.
-3. Per chunk: adjudicate, update slots, recompute the required set, propose
-   highlights. Highlight confirm/dismiss writes to the practitioner profile.
-4. Practitioner requests the report. The gate evaluates every required item.
-5. Each unresolved item must reach **answered** (with span), **declined** (with
-   reason), or **escalated** (agent drafts and files a follow-up action).
-6. Report generated, edited in-browser, shared. Transcript may be discarded.
+1. Practitioner picks a template. Required set = `required` items plus any
+   `depends_on` conditions already satisfied (none, at the start).
+2. Recording starts. A recording indicator is visible for the whole session.
+3. Per chunk: transcribe, adjudicate every open item, fold verdicts, recompute
+   the required set, propose the next question and highlights.
+4. Practitioner asks for the report. The gate evaluates every required item.
+5. Anything unresolved must reach **answered** (with its span), **declined**
+   (with a reason, and only where the template permits it), or **escalated**
+   (the agent drafts and files a follow-up action).
+6. Report assembled deterministically, edited in-browser, exported.
 
 ## Adjudication contract
 
-The core judgement: *does what was said constitute a substantive answer to this
-required item?* Inputs are the item definition, its retrieved guidance note, and
-the candidate transcript span. Output per item is a verdict, a confidence, and
-the span relied upon.
+Input: one template item, its human-authored guidance note, and the recent
+interviewee turns. Output, schema-constrained:
 
-Scoped **per item**, so a wrong verdict on one item cannot corrupt another.
+| Field | Meaning |
+|---|---|
+| `verdict` | `sufficient` · `insufficient` · `declined` |
+| `addressed` | Did this chunk bear on this item at all? |
+| `evidence` | Verbatim transcript span relied on; empty when not addressed |
+| `missing` | Guidance elements still unrecorded, in the guidance's own terms |
+| `reason` | One sentence for the practitioner, about the record not the person |
 
-Correctness is measured, not assumed — see `eval/`. The bar: never mark an
-answer sufficient that a labelled case marks insufficient.
+`addressed` exists because "insufficient" is otherwise ambiguous between *asked
+and dodged* and *never came up* — and without it the UI quotes a remark about
+falls underneath the continence item.
 
-## Data model _(planned)_
+Correctness is measured, not assumed. See `eval/`. The bar: never mark an
+answer sufficient that a labelled case marks insufficient. Current: **35/35,
+precision on `sufficient` 100%**.
+
+## Data model
 
 ```
-sessions/{sessionId}
-  templateId, startedAt, status, practitionerId
-  slots/{itemId}   → state: open|answered|declined|escalated
-                     value, evidenceSpan, verdictConfidence, resolvedAt
-  followups/{id}   → itemId, reason, destination, draftedAt
-  chunks/{seq}     → receivedAt, processedAt, retryCount
+sessions/{session_id}
+    template_id, practitioner_id, status, started_at, updated_at
+    slots: { item_id: { state, value, evidence, missing[], reason,
+                        resolved_at, source } }
+    highlights: [ {id, item_id, title, quote, status} ]
+    next_question: {item_id, prompt, why}
+    followups:  [ {item_id, outstanding, why, destination, drafted_at} ]
+    processed_chunks: [seq, ...]
+    recent_turns: [str, ...]        # capped at 12
+    report: {...} | null
 
-templates/{templateId}          → the config artifact (ADR-0003)
-guidance/{templateId}/{chunkId} → guidance note text + embedding
-practitioners/{practitionerId}  → highlight acceptance rates by category,
-                                  phrasing preferences, report voice
+practitioners/{practitioner_id}     # planned, not yet written
+    dismissed_categories, phrasing_notes, report_voice
 ```
 
-No interviewee identity is stored anywhere. See ADR-0007.
+Slot states: `open` → `partial` → `answered` | `declined` | `escalated`.
+`partial` is the state no competitor has: discussed, but not answered.
+
+Slots are a map on the session document rather than a subcollection, so the
+whole coverage view arrives in one realtime snapshot and each chunk is a single
+atomic write. Templates have tens of items, so the 1MiB document ceiling is not
+in play.
+
+**No interviewee identity is stored anywhere** (ADR-0007), and a test asserts
+it.
 
 ## External dependencies
 
 - **Vertex AI** — `gemini-3.6-flash`, structured output, native audio input.
-  Chosen over the Gemini API so Vertex AI logs double as the contest's required
-  visual proof of Google Cloud deployment.
-- **Firestore** — realtime listeners, offline persistence, vector search for
-  guidance retrieval (verify GA status; a small in-memory index is an acceptable
-  fallback).
-- **Google ADK (Python)** — agent orchestration. Note ADK 2.x had breaking
-  changes immediately before this project started; versions are pinned.
+  Chosen over the Gemini API so Vertex logs double as the contest's required
+  proof of Google Cloud. `GOOGLE_GENAI_USE_VERTEXAI=TRUE` is what makes ADK pick
+  this backend; without it ADK looks for an AI Studio key and fails.
+- **Firestore** — session state. Native mode required; a Datastore-mode project
+  fails on first write, which is why startup probes with a real read.
+- **Google ADK (Python) 2.6.2** — pinned. Requires `google-genai>=2.9`.
 
-## Failure modes _(planned — required by the Architectural Discipline criterion)_
+## Failure modes
 
-| Failure | Handling |
-|---|---|
-| Chunk POST fails | Local queue in the browser, retry with backoff, ordered replay |
-| Malformed structured output | Retry once with a stricter reprompt, then mark the chunk degraded and continue — never drop the session |
-| Network drops mid-session | Chunks queue locally; on reconnect, replay in order and reconcile slot state server-side |
-| Cloud Run instance recycles | No impact — state lives in Firestore, not ADK sessions (ADR-0004) |
+| Failure | Handling | Where |
+|---|---|---|
+| Chunk POST fails | Queued in the browser, replayed in order on the next success | `web/src/api.js` `ChunkQueue` |
+| Chunk replayed after a drop | `claim_chunk` makes it a no-op; the response says `replayed` | `store.claim_chunk` |
+| One item's adjudication errors | Logged, that item stays open and retries next chunk; its neighbours still land | `AdjudicationAgent` |
+| A whole turn raises | Response is `degraded: true`, session intact, recording continues | `POST /chunks` |
+| Malformed model output | Schema-constrained decode; a non-JSON body yields an empty dict, not a crash | `_loads` |
+| Firestore unusable | Startup probe fails → in-memory store with a loud warning | `default_store` |
+| Cloud Run instance recycles | No impact; durable state is Firestore's, not ADK's (ADR-0004) | — |
+| Oversized/invalid audio | 413 / 400 before decoding | `POST /chunks` |
 
 ## Deployment
 
-Cloud Run service (`intake-agent`), source deploy via Cloud Build. Firestore in
-the same region. Web client built statically and served from anywhere. The app
-does not need to be live during judging, but proof of Cloud deployment must be
-captured in the demo video before anything is switched off.
+Cloud Run service `intake-agent`, built from `backend/Dockerfile` via
+`backend/deploy.sh` (which stages `templates/` into the build context). Deployed
+with `--no-allow-unauthenticated` and an `INTAKE_API_KEY` secret: every endpoint
+spends money on Vertex AI. The web client builds statically and can be served
+anywhere.

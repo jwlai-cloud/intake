@@ -60,13 +60,16 @@ couple") is insufficient.
 3. A refusal or deflection by the practitioner's own suggestion does not \
 count as the interviewee's answer. Only the interviewee's words answer the \
 item.
-4. `evidence` must be a verbatim substring of the transcript — copy it, do \
-not paraphrase. If nothing in the transcript bears on the item, use an empty \
-string.
-5. `missing` lists, in the GUIDANCE's own terms, the elements not yet \
+4. `addressed` is true only when the transcript actually bears on THIS item. \
+A turn about falls does not address continence, alcohol intake or mood. When \
+`addressed` is false, `evidence` must be an empty string — do not reach for \
+the nearest quote. Most items are not addressed by most chunks; that is normal.
+5. `evidence` must be a verbatim substring of the transcript — copy it, do \
+not paraphrase.
+6. `missing` lists, in the GUIDANCE's own terms, the elements not yet \
 recorded. Empty when the verdict is "sufficient". This is a description of \
 what is absent, never a suggested answer.
-6. `reason` is one short sentence for the practitioner, phrased about the \
+7. `reason` is one short sentence for the practitioner, phrased about the \
 record, not the person: "no count recorded", not "the client seems confused".
 """
 
@@ -76,6 +79,10 @@ RESPONSE_SCHEMA = {
         "verdict": {
             "type": "string",
             "enum": ["sufficient", "insufficient", "declined"],
+        },
+        "addressed": {
+            "type": "boolean",
+            "description": "Does the transcript bear on this item at all?",
         },
         "evidence": {
             "type": "string",
@@ -88,7 +95,7 @@ RESPONSE_SCHEMA = {
         },
         "reason": {"type": "string"},
     },
-    "required": ["verdict", "evidence", "missing", "reason"],
+    "required": ["verdict", "addressed", "evidence", "missing", "reason"],
 }
 
 
@@ -98,6 +105,10 @@ class Verdict:
     evidence: str
     missing: tuple[str, ...]
     reason: str
+    # False means this chunk said nothing about the item. Without it, an
+    # "insufficient" verdict is ambiguous between "asked and dodged" and "never
+    # came up", and the UI ends up quoting a remark about falls under continence.
+    addressed: bool = True
 
 
 _client: genai.Client | None = None
@@ -155,9 +166,11 @@ def adjudicate(
         ),
     )
     data = json.loads(resp.text)
+    addressed = bool(data.get("addressed", True))
     return Verdict(
         verdict=data["verdict"],
-        evidence=data.get("evidence", ""),
+        evidence=data.get("evidence", "") if addressed else "",
         missing=tuple(data.get("missing", ())),
         reason=data.get("reason", ""),
+        addressed=addressed,
     )

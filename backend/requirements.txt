@@ -1,0 +1,7 @@
+# Pinned deliberately: ADK 2.x had breaking changes in the week before this
+# project started, and 2.6.2 requires google-genai>=2.9.
+google-adk==2.6.2
+google-genai==2.16.0
+google-cloud-firestore==2.21.0
+fastapi==0.121.2
+uvicorn[standard]==0.38.0

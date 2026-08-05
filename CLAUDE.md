@@ -51,6 +51,8 @@ Collaborative Partner.
 | Three-state gate: answered / declined / escalated | ADR-0005 |
 | The agent never authors domain content | ADR-0006 |
 | Practitioner-scoped memory only; no interviewee identity | ADR-0007 |
+| ADK SequentialAgent now, graph Workflow later | ADR-0008 |
+| Slots as a map on the session doc; probed memory fallback | ADR-0009 |
 
 ## Rules that are not negotiable
 
@@ -104,7 +106,11 @@ The adjudicator comes first, before any UI. It is the whole product.
 - Keep `docs/ARCHITECTURE.md` a snapshot of *now* — replace, don't append.
 - **Check current SDK docs before writing integration code.** ADK 2.x had
   breaking changes in the week before this project started (2.6.2 shipped
-  4 Aug 2026); agents subclass `BaseNode`, callbacks and event schemas moved.
-  Any tutorial predating ADK 2.0 will not copy-paste. Pin versions.
+  4 Aug 2026). Verified against a real install, not from memory: agents still
+  subclass `BaseAgent` and override `_run_async_impl`. `BaseNode` belongs to the
+  new `google.adk.workflow` graph API, which is a different contract, and
+  `SequentialAgent` is deprecated in its favour — see ADR-0008. `google-adk`
+  and `google-genai` must be pinned **together**: 2.6.2 requires
+  `google-genai>=2.9`. Any tutorial predating ADK 2.0 will not copy-paste.
 - Small, reviewable commits with messages that make sense in `git log` later.
   A judge sometimes reads commit history.
