@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from dataclasses import dataclass
-from functools import lru_cache
 
 from google import genai
 from google.genai import types
@@ -100,14 +100,29 @@ class Verdict:
     reason: str
 
 
-@lru_cache(maxsize=1)
+_client: genai.Client | None = None
+_client_lock = threading.Lock()
+
+
 def get_client() -> genai.Client:
-    """Vertex AI client. Project/location from the environment (ADR: Vertex, not AI Studio)."""
-    return genai.Client(
-        vertexai=True,
-        project=os.environ["GOOGLE_CLOUD_PROJECT"],
-        location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
-    )
+    """The process-wide Vertex AI client (ADR: Vertex, not AI Studio).
+
+    Built under a lock rather than with `lru_cache`: the cache is not atomic, so
+    concurrent adjudication threads each construct a Client, and the duplicate
+    that loses the race is garbage collected — closing the shared HTTP transport
+    out from under every in-flight request. The symptom is a burst of
+    "Cannot send a request, as the client has been closed".
+    """
+    global _client
+    if _client is None:
+        with _client_lock:
+            if _client is None:
+                _client = genai.Client(
+                    vertexai=True,
+                    project=os.environ["GOOGLE_CLOUD_PROJECT"],
+                    location=os.environ.get("GOOGLE_CLOUD_LOCATION", "global"),
+                )
+    return _client
 
 
 def _prompt(item: Item, turns: list[str]) -> str:

@@ -61,22 +61,24 @@ TRANSCRIBE_SCHEMA = {
     "required": ["turns"],
 }
 
-transcriber = LlmAgent(
-    name="transcriber",
-    model=DEFAULT_MODEL,
-    description="Transcribes one audio chunk into speaker-attributed turns.",
-    instruction=(
-        "Transcribe the audio verbatim into turns. Label each turn "
-        "`practitioner` (the professional asking the questions) or "
-        "`interviewee` (the person answering). Transcribe what was said, "
-        "including hedges and false starts — do not tidy the speech up, "
-        "because whether an answer was vague is exactly what is being judged "
-        "downstream. Never invent a turn. If the audio contains no speech, "
-        "return an empty list."
-    ),
-    output_schema=TRANSCRIBE_SCHEMA,
-    output_key="transcript",
-)
+def make_transcriber(model: str = DEFAULT_MODEL) -> LlmAgent:
+    """A fresh instance per pipeline: an ADK agent may only have one parent."""
+    return LlmAgent(
+        name="transcriber",
+        model=model,
+        description="Transcribes one audio chunk into speaker-attributed turns.",
+        instruction=(
+            "Transcribe the audio verbatim into turns. Label each turn "
+            "`practitioner` (the professional asking the questions) or "
+            "`interviewee` (the person answering). Transcribe what was said, "
+            "including hedges and false starts — do not tidy the speech up, "
+            "because whether an answer was vague is exactly what is being judged "
+            "downstream. Never invent a turn. If the audio contains no speech, "
+            "return an empty list."
+        ),
+        output_schema=TRANSCRIBE_SCHEMA,
+        output_key="transcript",
+        )
 
 # --- stage 3: coaching -------------------------------------------------------
 
@@ -108,33 +110,34 @@ COACH_SCHEMA = {
     "required": ["next_question", "highlights"],
 }
 
-coach = LlmAgent(
-    name="coach",
-    model=DEFAULT_MODEL,
-    description="Proposes the next question to ask and highlights worth keeping.",
-    instruction=(
-        "You are the practitioner's second chair. You are given a BRIEF listing "
-        "the items that still lack a recorded answer, what each one is missing, "
-        "and the verbatim quotes captured in the last chunk.\n\n"
-        "Produce:\n"
-        "1. `next_question` — the single question the practitioner should ask "
-        "next, phrased naturally enough to say out loud, targeting the highest "
-        "item in the brief. `why` states which element of the guidance it "
-        "closes, in one short clause.\n"
-        "2. `highlights` — quotes from this chunk worth surfacing, each with the "
-        "item it bears on. Quote verbatim. Empty list if nothing is worth "
-        "surfacing.\n\n"
-        "Hard rules. You ask questions; you never write answers. Never suggest "
-        "what the interviewee might have meant, never propose wording for an "
-        "item, and never state a professional judgement about the person. For "
-        "an item the brief marks HIGH RISK, ask the question and stop — offer "
-        "nothing else about it. Do not invent a quote: every quote must appear "
-        "verbatim in the brief.\n\n"
-        "BRIEF:\n{coach_brief}"
-    ),
-    output_schema=COACH_SCHEMA,
-    output_key="coaching",
-)
+def make_coach(model: str = DEFAULT_MODEL) -> LlmAgent:
+    return LlmAgent(
+        name="coach",
+        model=model,
+        description="Proposes the next question to ask and highlights worth keeping.",
+        instruction=(
+            "You are the practitioner's second chair. You are given a BRIEF listing "
+            "the items that still lack a recorded answer, what each one is missing, "
+            "and the verbatim quotes captured in the last chunk.\n\n"
+            "Produce:\n"
+            "1. `next_question` — the single question the practitioner should ask "
+            "next, phrased naturally enough to say out loud, targeting the highest "
+            "item in the brief. `why` states which element of the guidance it "
+            "closes, in one short clause.\n"
+            "2. `highlights` — quotes from this chunk worth surfacing, each with the "
+            "item it bears on. Quote verbatim. Empty list if nothing is worth "
+            "surfacing.\n\n"
+            "Hard rules. You ask questions; you never write answers. Never suggest "
+            "what the interviewee might have meant, never propose wording for an "
+            "item, and never state a professional judgement about the person. For "
+            "an item the brief marks HIGH RISK, ask the question and stop — offer "
+            "nothing else about it. Do not invent a quote: every quote must appear "
+            "verbatim in the brief.\n\n"
+            "BRIEF:\n{coach_brief}"
+        ),
+        output_schema=COACH_SCHEMA,
+        output_key="coaching",
+        )
 
 
 # --- stage 2: adjudication (the product) -------------------------------------
@@ -247,9 +250,9 @@ def build_root_agent(store: BaseStore, model: str = DEFAULT_MODEL) -> Sequential
         name="intake_turn",
         description="Transcribe one chunk, adjudicate every open item, coach the next question.",
         sub_agents=[
-            transcriber,
+            make_transcriber(model),
             AdjudicationAgent(name="adjudication", store=store, model=model),
-            coach,
+            make_coach(model),
         ],
     )
 
@@ -336,26 +339,27 @@ ESCALATION_SCHEMA = {
     "required": ["outstanding", "why", "destination"],
 }
 
-escalation_agent = LlmAgent(
-    name="escalation",
-    model=DEFAULT_MODEL,
-    description="Drafts the follow-up action for an item that could not be closed.",
-    instruction=(
-        "An item on a mandated form could not be resolved during the interview. "
-        "Draft the follow-up action that will be filed.\n\n"
-        "`outstanding` states, in one sentence, precisely what is still not "
-        "recorded — in terms of the form's own guidance. `why` states why it "
-        "could not be closed, drawing only on what the BRIEF says; if the brief "
-        "does not say, write 'not recorded during the visit'. `destination` "
-        "names the queue or role it should go to, chosen from the DESTINATIONS "
-        "list only.\n\n"
-        "Never speculate about the person and never propose the answer itself. "
-        "You are writing an administrative action, not a clinical or "
-        "professional opinion.\n\nBRIEF:\n{escalation_brief}"
-    ),
-    output_schema=ESCALATION_SCHEMA,
-    output_key="escalation",
-)
+def make_escalation_agent(model: str = DEFAULT_MODEL) -> LlmAgent:
+    return LlmAgent(
+        name="escalation",
+        model=model,
+        description="Drafts the follow-up action for an item that could not be closed.",
+        instruction=(
+            "An item on a mandated form could not be resolved during the interview. "
+            "Draft the follow-up action that will be filed.\n\n"
+            "`outstanding` states, in one sentence, precisely what is still not "
+            "recorded — in terms of the form's own guidance. `why` states why it "
+            "could not be closed, drawing only on what the BRIEF says; if the brief "
+            "does not say, write 'not recorded during the visit'. `destination` "
+            "names the queue or role it should go to, chosen from the DESTINATIONS "
+            "list only.\n\n"
+            "Never speculate about the person and never propose the answer itself. "
+            "You are writing an administrative action, not a clinical or "
+            "professional opinion.\n\nBRIEF:\n{escalation_brief}"
+        ),
+        output_schema=ESCALATION_SCHEMA,
+        output_key="escalation",
+        )
 
 
 def escalation_brief(session: SessionState, item_id: str,
@@ -388,7 +392,7 @@ class Escalator:
         self.store = store
         self.runner = Runner(
             app_name=APP_NAME,
-            agent=escalation_agent,
+            agent=make_escalation_agent(model),
             session_service=InMemorySessionService(),
         )
 
