@@ -53,6 +53,8 @@ Collaborative Partner.
 | Practitioner-scoped memory only; no interviewee identity | ADR-0007 |
 | ADK SequentialAgent now, graph Workflow later | ADR-0008 |
 | Slots as a map on the session doc; probed memory fallback | ADR-0009 |
+| Own the sequential orchestration; no SequentialAgent | ADR-0010 |
+| Cost exposure of a browser-callable agent | ADR-0011 |
 
 ## Rules that are not negotiable
 

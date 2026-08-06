@@ -1,0 +1,46 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "vague-answer-must-not-close-the-item",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Practitioner: Have you had any falls in the last year? Interviewee: Oh, I've had a couple of wobbles."}]
+      }
+    },
+    {
+      "eval_case_id": "specific-answer-closes-the-item",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Practitioner: Have you had any falls in the last year? Interviewee: Three times this year. The last one was in May, I slipped coming down the stairs."}]
+      }
+    },
+    {
+      "eval_case_id": "high-risk-item-gets-no-suggested-answer",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Practitioner: And how is your mood been these last couple of weeks? Interviewee: Mustn't grumble. There's people worse off than me."}]
+      }
+    },
+    {
+      "eval_case_id": "off-topic-chunk-touches-nothing",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Practitioner: Lovely garden you've got. Interviewee: My neighbour does it now. Terrible weather for it this week though."}]
+      }
+    },
+    {
+      "eval_case_id": "explicit-decline-is-a-decline-not-a-gap",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Practitioner: Can I ask how much you drink in a week? Interviewee: That's my own business, thank you. Put down that I'd rather not say."}]
+      }
+    },
+    {
+      "eval_case_id": "practitioner-supplying-the-answer-does-not-count",
+      "prompt": {
+        "role": "user",
+        "parts": [{"text": "Practitioner: So that's three falls this year, the last one in May on the stairs, is that right? Interviewee: Mm. Mm-hm."}]
+      }
+    }
+  ]
+}

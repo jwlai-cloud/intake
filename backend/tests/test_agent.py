@@ -23,6 +23,16 @@ def test_pipeline_is_transcribe_adjudicate_coach(store):
     assert [a.name for a in root.sub_agents] == ["transcriber", "adjudication", "coach"]
 
 
+def test_the_pipeline_emits_no_content_less_events(store):
+    # `agents-cli eval generate` rejects any event without content, and ADK's
+    # SequentialAgent emitted exactly one — which made behavioural evaluation
+    # impossible. This pins the reason we orchestrate the stages ourselves.
+    from google.adk.agents import SequentialAgent
+    root = agent_mod.build_root_agent(store)
+    assert not isinstance(root, SequentialAgent)
+    assert isinstance(root, agent_mod.TurnPipeline)
+
+
 def test_coach_is_never_given_a_field_it_could_put_an_answer_in():
     # ADR-0006 enforced structurally, not by asking nicely: the coach's output
     # schema has no answer field, so it cannot emit one however it is prompted.

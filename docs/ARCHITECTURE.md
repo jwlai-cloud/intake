@@ -15,7 +15,7 @@ Firestore database, in project `agent-era`.
 |---|---|---|---|
 | Web client | React 18 + Vite | Mic capture, 18s chunking, local chunk queue, live coverage UI, three-state gate, report edit | Built |
 | Agent service | FastAPI + ADK Python 2.6.2 | HTTP surface, turn orchestration, gate, report assembly | Built |
-| Turn pipeline | ADK `SequentialAgent` | transcribe → route → adjudicate → coach | Built |
+| Turn pipeline | ADK custom `BaseAgent` (`TurnPipeline`) | transcribe → route → adjudicate → coach | Built |
 | Router | `gemini-3.6-flash`, schema-constrained | Which open items does this chunk bear on? | Built |
 | Adjudicator | `gemini-3.6-flash` via Vertex AI, schema-constrained | Answer-level judgement, one call per item | Built, 46/47 on eval |
 | Session store | Firestore, with in-memory fallback | Durable slot state, follow-ups, highlights | Built |
@@ -52,6 +52,27 @@ and this chunk's quotes. Adjudication sees a capped window of the last 12
 interviewee turns, which is what lets an answer arrive across two turns without
 letting context grow without bound. A three-hour interview costs the same per
 chunk as a ten-minute one.
+
+## Evaluation, at two levels
+
+| Harness | Question it answers | Where |
+|---|---|---|
+| `eval/run_eval.py` | Is the adjudicator's *judgement* right, item by item? | 47 labelled cases, 46/47, precision 100% |
+| `agents-cli eval` | Does the *pipeline* behave — does it obey ADR-0006, does it ask about something genuinely open? | 6 cases, `tests/eval/`, all metrics 5/5 |
+
+The second is not a nicety. Its first clean run found a real ADR-0006 hole that
+the schema could not catch: the coach's highlight `title` is free text, and it
+had written "Formal decline to answer alcohol question" — an interpretation, not
+a label. See ADR-0010.
+
+Running it needs an ADK server, because `eval generate` speaks ADK's HTTP
+protocol rather than ours:
+
+```bash
+cd backend && PYTHONPATH=. uv run adk api_server adk_apps --port 8001
+agents-cli eval run --dataset tests/eval/datasets/turn-pipeline.json \
+  --url http://localhost:8001 --app-name intake --config tests/eval/eval_config.yaml
+```
 
 ## Why adjudication is not an LlmAgent
 

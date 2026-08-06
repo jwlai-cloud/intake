@@ -127,7 +127,12 @@ def make_coach(model: str = DEFAULT_MODEL) -> LlmAgent:
             "closes, in one short clause.\n"
             "2. `highlights` — quotes from this chunk worth surfacing, each with the "
             "item it bears on. Quote verbatim. Empty list if nothing is worth "
-            "surfacing.\n\n"
+            "surfacing. `title` must be a plain noun phrase naming the topic and "
+            "nothing more — \"Falls\", \"Alcohol intake\", \"Medication adherence\". "
+            "It is a label, not a finding: never characterise the answer, the "
+            "person, or what the quote implies. \"Formal decline to answer\" and "
+            "\"Reluctant about alcohol\" are both wrong; \"Alcohol intake\" is "
+            "right.\n\n"
             "Hard rules. You ask questions; you never write answers. Never suggest "
             "what the interviewee might have meant, never propose wording for an "
             "item, and never state a professional judgement about the person. For "
@@ -170,6 +175,8 @@ class AdjudicationAgent(BaseAgent):
 
         session = self.store.get(session_id)
         open_items = [session.template[i] for i in session.outstanding_ids()]
+        relevant_ids: list[str] = []
+        updated: list[str] = []
 
         if turns and open_items:
             session = self.store.append_turns(session_id, turns)
@@ -180,8 +187,9 @@ class AdjudicationAgent(BaseAgent):
             # continence and cannot leave its quote there.
             relevant = await asyncio.to_thread(
                 route, open_items, turns, model=self.model)
+            relevant_ids = [i.id for i in relevant]
             log.info("chunk routed to %d of %d open items: %s",
-                     len(relevant), len(open_items), [i.id for i in relevant])
+                     len(relevant), len(open_items), relevant_ids)
 
             verdicts = await asyncio.gather(*[
                 asyncio.to_thread(adjudicate, item, heard, model=self.model)
@@ -196,19 +204,34 @@ class AdjudicationAgent(BaseAgent):
                     continue
                 if not verdict.addressed:
                     continue  # this chunk said nothing about the item
-                self.store.apply_verdict(
+                after = self.store.apply_verdict(
                     session_id, item.id, verdict.verdict,
                     value=verdict.evidence, evidence=verdict.evidence,
                     missing=list(verdict.missing), reason=verdict.reason,
                 )
+                updated.append(f"{item.id}={after.slots[item.id]['state']}")
 
         session = self.store.get(session_id)
         brief = build_coach_brief(session, turns)
+        resolved, required = session.coverage()
+
+        # The event carries content as well as the state delta. An event with
+        # only a state_delta is invisible to anything reading the trace — ADK's
+        # eval tooling rejects it outright as "missing content", and it does not
+        # show up in `adk web` either. The text is the audit line for this turn.
+        summary = (
+            f"Adjudicated {len(relevant_ids)} of {len(open_items)} open items "
+            f"against {len(turns)} interviewee turn(s). "
+            f"Coverage {resolved}/{required}."
+            + (f" Updated: {', '.join(updated)}." if updated else " No item changed state.")
+        )
 
         yield Event(
             author=self.name,
             invocation_id=ctx.invocation_id,
             branch=ctx.branch,
+            content=types.Content(role="model",
+                                  parts=[types.Part.from_text(text=summary)]),
             actions=EventActions(state_delta={
                 "coach_brief": brief,
                 "heard_turns": turns,
@@ -257,8 +280,36 @@ def _loads(raw: str) -> dict:
 # --- the pipeline ------------------------------------------------------------
 
 
-def build_root_agent(store: BaseStore, model: str = DEFAULT_MODEL) -> SequentialAgent:
-    return SequentialAgent(
+class TurnPipeline(BaseAgent):
+    """Runs the three stages in order, forwarding each stage's events.
+
+    This was a `SequentialAgent`. It is hand-rolled now for two reasons that
+    arrived together:
+
+    1. `SequentialAgent` is deprecated in ADK 2.6.2 in favour of the graph
+       `Workflow` API, which cannot yet take an `LlmAgent` as a sub-agent — so
+       the obvious migration is blocked (ADR-0008).
+    2. More pressingly, `SequentialAgent` emits a container event carrying only
+       `actions` and no `content`, and `agents-cli eval generate` rejects any
+       content-less event outright with "Malformed agent event: missing
+       content". ADK's deprecated orchestrator is incompatible with ADK's
+       current eval tooling, so behavioural evaluation was impossible until
+       this stopped being a SequentialAgent.
+
+    Sequential composition is a four-line loop, so owning it costs nothing and
+    means every event in the trace is one we deliberately emitted.
+    """
+
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
+        for stage in self.sub_agents:
+            async for event in stage.run_async(ctx):
+                yield event
+
+
+def build_root_agent(store: BaseStore, model: str = DEFAULT_MODEL) -> TurnPipeline:
+    return TurnPipeline(
         name="intake_turn",
         description="Transcribe one chunk, adjudicate every open item, coach the next question.",
         sub_agents=[

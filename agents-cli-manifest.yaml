@@ -1,0 +1,18 @@
+# Minimal manifest so `agents-cli eval` can find this project.
+#
+# Written by hand rather than via `agents-cli scaffold enhance .`, which would
+# restructure a repo that already has its own layout, tests and deploy script.
+# Only the fields agents-cli actually reads are set.
+#
+# `agent_directory` points at the ADK entrypoint package, not at the service
+# package: `backend/adk_apps/intake` is what exports a module-level
+# `root_agent` for ADK tooling to discover.
+name: intake
+agent_directory: backend/adk_apps/intake
+base_template: adk
+language: python
+region: us-central1
+deployment_target: cloud_run
+session_type: none
+cicd_runner: skip
+agent_guidance_filename: CLAUDE.md
