@@ -71,6 +71,13 @@ recorded. Empty when the verdict is "sufficient". This is a description of \
 what is absent, never a suggested answer.
 7. `reason` is one short sentence for the practitioner, phrased about the \
 record, not the person: "no count recorded", not "the client seems confused".
+8. When the interviewee changes position, the later turn governs — but only \
+when that later turn is itself a clear answer or a clear refusal. A retraction \
+that leaves the record hedged or uncertain ("actually that was my sister", \
+"not that I can bring to mind", "I might be wrong") settles nothing, and the \
+verdict is insufficient however confident the earlier turn was. Never average \
+two conflicting turns and never pick the more complete one. A contradiction in \
+the record is for the practitioner to resolve, not for you.
 """
 
 RESPONSE_SCHEMA = {

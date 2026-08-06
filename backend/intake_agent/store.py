@@ -314,8 +314,14 @@ class FirestoreStore(BaseStore):
         self._doc(state.session_id).set(state.to_dict())
 
     def probe(self) -> None:
-        """Round-trip a read so an unusable database fails at startup, not mid-visit."""
-        self._db.collection(self._collection).document("__probe__").get()
+        """Round-trip a read so an unusable database fails at startup, not mid-visit.
+
+        A bounded query rather than a named document: Firestore reserves ids
+        matching `__…__`, so a probe document called `__probe__` is itself a
+        400 and the probe fails for a reason that has nothing to do with the
+        database being reachable.
+        """
+        list(self._db.collection(self._collection).limit(1).stream())
 
 
 def default_store() -> BaseStore:
