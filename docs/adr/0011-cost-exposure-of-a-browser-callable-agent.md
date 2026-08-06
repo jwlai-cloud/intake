@@ -17,10 +17,19 @@ coaching call.
 
 Two facts drive this decision.
 
-**Google Cloud has no hard spend cap.** Budgets are notification-only. A budget
-alert emails you after the fact and stops nothing. The only true hard stop is
-the documented budget → Pub/Sub → Cloud Function pattern that programmatically
-detaches the billing account, which takes the whole project down with it.
+**Correction, same day.** This ADR originally stated that Google Cloud has no
+hard spend cap and that budgets are notification-only. That is out of date.
+Cloud Billing now offers **spend cap enforcement** (Preview): a monthly budget
+scoped to one project and one service that *pauses* the service when the cap is
+reached. Enforcement is not instantaneous — overage is still billed — so the cap
+belongs below the real limit.
+
+The trap it replaces the old one with: the cap is scoped to a single named
+service, and `Gemini API (generativelanguage.googleapis.com)` is **not** the
+service this project spends on. Intake calls Vertex AI (`vertexai=True`,
+`GOOGLE_GENAI_USE_VERTEXAI=TRUE`), so the cap must name
+`aiplatform.googleapis.com`. Both APIs are enabled on the project, which makes
+the wrong choice look right.
 
 **The deployed defaults were wide open.** `maxScale: 20` with
 `containerConcurrency: 80` allows 1,600 concurrent requests.

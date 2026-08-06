@@ -168,6 +168,39 @@ def test_the_api_key_gate_closes_when_a_key_is_configured(client, monkeypatch):
     assert ok.status_code == 200
 
 
+def test_a_leaked_key_is_still_rate_limited(client, monkeypatch):
+    # The access code is typed rather than shipped in the bundle, but a code
+    # that leaks anyway must not be worth much: the ceiling on abuse is the
+    # Vertex bill, not the request count.
+    c, _ = client
+    monkeypatch.setenv("INTAKE_API_KEY", "s3cret")
+    monkeypatch.setattr(main, "RATE_LIMIT_PER_MINUTE", 3)
+    main._hits.clear()
+
+    headers = {"X-Intake-Key": "s3cret"}
+    body = {"template_id": "community-nursing-v1", "practitioner_id": "p1"}
+    codes = [c.post("/sessions", json=body, headers=headers).status_code
+             for _ in range(5)]
+    assert codes[:3] == [200, 200, 200]
+    assert codes[3:] == [429, 429]
+
+
+def test_a_wrong_key_costs_nothing_and_does_not_burn_the_real_budget(client, monkeypatch):
+    # A 401 does no model work, so an anonymous flood is cheap. Importantly it
+    # must not consume the legitimate key's allowance either.
+    c, _ = client
+    monkeypatch.setenv("INTAKE_API_KEY", "s3cret")
+    monkeypatch.setattr(main, "RATE_LIMIT_PER_MINUTE", 2)
+    main._hits.clear()
+
+    body = {"template_id": "community-nursing-v1", "practitioner_id": "p1"}
+    for _ in range(10):
+        assert c.post("/sessions", json=body,
+                      headers={"X-Intake-Key": "wrong"}).status_code == 401
+    assert c.post("/sessions", json=body,
+                  headers={"X-Intake-Key": "s3cret"}).status_code == 200
+
+
 def test_unknown_session_is_a_404(client):
     c, _ = client
     assert c.get("/sessions/nope").status_code == 404

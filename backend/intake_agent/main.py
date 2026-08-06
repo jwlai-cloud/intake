@@ -9,8 +9,13 @@ way.
 from __future__ import annotations
 
 import base64
+import hashlib
 import logging
 import os
+import secrets
+import threading
+import time
+from collections import defaultdict, deque
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -48,10 +53,48 @@ def require_api_key(x_intake_key: str | None = Header(default=None)) -> None:
     Every endpoint below spends money on Vertex AI, so an open deployment is an
     open wallet. If INTAKE_API_KEY is unset the service runs ungated for local
     development — set it in Cloud Run.
+
+    Compared in constant time: a plain `!=` on a secret leaks its prefix to a
+    patient attacker through response timing.
+
+    This is a stopgap for the contest. Firebase Auth ID tokens replace it —
+    see ADR-0012.
     """
     expected = os.environ.get("INTAKE_API_KEY")
-    if expected and x_intake_key != expected:
+    if not expected:
+        return
+    if not x_intake_key or not secrets.compare_digest(x_intake_key, expected):
         raise HTTPException(status_code=401, detail="bad or missing X-Intake-Key")
+    _rate_limit(x_intake_key)
+
+
+# Requests per minute per key. One interview turn is ~18 Vertex calls, and a
+# practitioner speaking produces a chunk every 18 seconds — so a real session
+# needs about 4/min. 20 leaves generous headroom while capping what a leaked
+# code is worth: the ceiling is the bill, not the traffic.
+RATE_LIMIT_PER_MINUTE = int(os.environ.get("INTAKE_RATE_LIMIT_PER_MINUTE", "20"))
+_hits: dict[str, deque[float]] = defaultdict(deque)
+_hits_lock = threading.Lock()
+
+
+def _rate_limit(key: str) -> None:
+    """Per-key sliding window, in process.
+
+    ponytail: in-memory, so the real limit is per Cloud Run instance and the
+    service is capped at 2. Good enough while the key count is one. Move to a
+    Firestore counter keyed on the Firebase uid when there are real users.
+    """
+    now = time.monotonic()
+    bucket = _hits[hashlib.sha256(key.encode()).hexdigest()]
+    with _hits_lock:
+        while bucket and now - bucket[0] > 60:
+            bucket.popleft()
+        if len(bucket) >= RATE_LIMIT_PER_MINUTE:
+            raise HTTPException(
+                status_code=429,
+                detail=f"rate limit: {RATE_LIMIT_PER_MINUTE} requests per minute",
+            )
+        bucket.append(now)
 
 
 def get_session(session_id: str):

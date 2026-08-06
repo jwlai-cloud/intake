@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as api from './api'
-import { ChunkQueue } from './api'
+import { ChunkQueue, getAccessCode, setAccessCode } from './api'
 import { startRecording } from './recorder'
 import './app.css'
 
@@ -50,9 +50,15 @@ export default function App() {
 
   const begin = async (templateId) => {
     setError('')
-    const s = await api.createSession(templateId, 'practitioner-demo')
-    setSession(s)
-    queue.current = new ChunkQueue(s.session_id, setSession, setQueued)
+    try {
+      const s = await api.createSession(templateId, 'practitioner-demo')
+      setSession(s)
+      queue.current = new ChunkQueue(s.session_id, setSession, setQueued)
+    } catch (err) {
+      setError(err.status === 401
+        ? 'That access code was not accepted. Check it and try again.'
+        : err.message)
+    }
   }
 
   const toggleRecording = async () => {
@@ -154,6 +160,7 @@ function Landing({ templates, onBegin, error }) {
             Required items appear here as they are raised and <b>substantively
             answered</b>. No interviewee identity is recorded at any point.
           </p>
+          <AccessCodeField />
           {error && <p className="missing">{error}</p>}
           <div className="actions" style={{ justifyContent: 'center' }}>
             {templates.map((t) => (
@@ -165,6 +172,44 @@ function Landing({ templates, onBegin, error }) {
         </section>
       </main>
     </>
+  )
+}
+
+/**
+ * The access code is typed, not built in. See the note in api.js: a key inlined
+ * by Vite ships inside the bundle, and this endpoint spends money per request.
+ */
+function AccessCodeField() {
+  const [code, setCode] = useState(getAccessCode())
+  const [saved, setSaved] = useState(Boolean(getAccessCode()))
+
+  return (
+    <div style={{ maxWidth: 440, margin: '0 auto 22px' }}>
+      <label className="eyebrow" htmlFor="accessCode"
+             style={{ display: 'block', marginBottom: 7 }}>
+        Access code
+      </label>
+      <div className="actions">
+        <input
+          id="accessCode"
+          type="password"
+          value={code}
+          onChange={(e) => { setCode(e.target.value); setSaved(false) }}
+          onBlur={() => { setAccessCode(code); setSaved(Boolean(code.trim())) }}
+          placeholder="Paste the code from the submission notes"
+          style={{ flex: 1, border: '1px solid var(--line)', borderRadius: 8,
+                   padding: '9px 11px' }}
+        />
+        <button className="mini confirm"
+                onClick={() => { setAccessCode(code); setSaved(Boolean(code.trim())) }}>
+          {saved ? 'Saved' : 'Save'}
+        </button>
+      </div>
+      <p className="why" style={{ marginTop: 8 }}>
+        Held in this tab only, never stored in the build. Every interview turn
+        calls Vertex AI, so the endpoint is not left open.
+      </p>
+    </div>
   )
 }
 

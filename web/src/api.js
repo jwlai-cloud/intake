@@ -1,12 +1,31 @@
 const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
-const KEY = import.meta.env.VITE_API_KEY || ''
+
+/**
+ * The access code is typed in by the user and kept in sessionStorage — never
+ * baked into the build.
+ *
+ * Vite inlines `import.meta.env.*` at build time, so a `VITE_API_KEY` would
+ * ship inside the JS bundle and be readable by anyone who opens it. Since the
+ * endpoint spends money on Vertex AI per request, that is a published key to a
+ * paid API. Typing it costs a reviewer five seconds and keeps the secret out of
+ * every artifact we hand out.
+ *
+ * This is a stopgap for the contest, not an auth system. Firebase Auth ID
+ * tokens replace it — see ADR-0012.
+ */
+const KEY_STORAGE = 'intake.accessCode'
+
+export const getAccessCode = () => sessionStorage.getItem(KEY_STORAGE) || ''
+export const setAccessCode = (code) => sessionStorage.setItem(KEY_STORAGE, code.trim())
+export const clearAccessCode = () => sessionStorage.removeItem(KEY_STORAGE)
 
 async function call(path, { method = 'GET', body } = {}) {
+  const key = getAccessCode()
   const res = await fetch(BASE + path, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(KEY ? { 'X-Intake-Key': KEY } : {}),
+      ...(key ? { 'X-Intake-Key': key } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   })
