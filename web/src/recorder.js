@@ -18,7 +18,13 @@
  * The alternative — cache the header blob and prepend it to every fragment —
  * has no gap but depends on container internals. Not worth it here.
  */
-export const CHUNK_MS = 18000
+// 18s in normal use. Overridable because it is the single biggest lever on
+// how a live demo feels: the first coverage update cannot arrive until one
+// chunk has been captured *and* processed, and processing is ~20s regardless
+// of chunk length. A shorter chunk brings the first tick forward without
+// changing anything else.
+//   VITE_CHUNK_MS=8000 npm run dev
+export const CHUNK_MS = Number(import.meta.env.VITE_CHUNK_MS) || 18000
 
 const PREFERRED = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
 
