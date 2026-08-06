@@ -6,9 +6,10 @@ machinery behind it.
 
 | File | What it is |
 |---|---|
-| `rehearse.py` | Drives the deployed service through the exact beats and records the screen. Prints when each item actually changes state. |
+| `rehearse.py` | Drives the deployed service through the exact beats and records a narrated mp4. Prints when each item actually changes state. |
+| `overlay.js` | Injected into the page during a rehearsal: visible cursor, click ripples, caption bar, running clock. A raw Playwright capture has no pointer and no sound, so state appears to change with no visible cause. |
 | `preroll-1.txt`, `preroll-2.txt` | Two paste-and-sends that take a fresh session to **11 of 14 resolved** in about 50 seconds. Not filmed — this is the state you start recording from. |
-| `rehearsal/` | Output: video, stills, timing log. Gitignored. |
+| `rehearsal/intake-rehearsal.mp4` | The reference recording. h264 + aac, plays anywhere. Gitignored — regenerate it. |
 
 ## Rehearse
 
@@ -22,8 +23,13 @@ export INTAKE_KEY=<the access code>
 uv run --with playwright python demo/rehearse.py
 ```
 
-Watch `rehearsal/*.webm`. That is what the app does, in the order it does it —
-the choreography to follow when a real person is answering instead of a script.
+Watch `rehearsal/intake-rehearsal.mp4`. That is what the app does, in the order
+it does it, with the pointer visible and each beat narrated — the choreography
+to follow when a real person is answering instead of a script.
+
+`--no-narrate` skips the voice track. Narration uses macOS `say`; the mp4
+conversion uses ffmpeg. Both are skipped with a warning if absent, and you still
+get the silent capture.
 
 **Re-run it the morning of the take.** Model latency drifts, and the shot list
 is built on these numbers.
