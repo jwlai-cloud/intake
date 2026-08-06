@@ -97,6 +97,18 @@ export default function App() {
   const resolve = async (body) => {
     const s = await api.resolveItem(session.session_id, body)
     setSession(s)
+    // When the last outstanding item is resolved, produce the report rather
+    // than leaving an empty modal sitting over the page — the gate is a router,
+    // and once it has nothing left to route it should get out of the way.
+    if (s.gate_open) {
+      setGate(null)
+      try {
+        setSession(await api.generateReport(s.session_id))
+      } catch (err) {
+        setError(err.message)
+      }
+      return
+    }
     setGate((g) => g?.filter((o) => o.item_id !== body.item_id) ?? null)
   }
 
@@ -326,9 +338,11 @@ function Live({ session, recording, queued, error, onToggleRecording, onSendText
 }
 
 function ItemRow({ item }) {
-  const cls = item.high_risk && item.state !== 'answered' && item.evidence
-    ? 'risk'
-    : CLASS_FOR[item.state] || 'open'
+  // State drives the colour, always. "Mentioned" is the state the product
+  // exists to show, so a high-risk item must not lose it — high risk changes
+  // what is *offered* (no suggested answer, ADR-0006), not what is true about
+  // the record.
+  const cls = CLASS_FOR[item.state] || 'open'
   const resolved = ['answered', 'declined', 'escalated'].includes(item.state)
 
   return (
@@ -349,13 +363,14 @@ function ItemRow({ item }) {
         )}
         {/* High-risk items get the quote and nothing else — no suggested
             answer is ever offered for them (ADR-0006). */}
-        {!resolved && item.high_risk && item.evidence && (
-          <div className="quote">Relevant quote: “{item.evidence}”</div>
+        {!resolved && item.evidence && (
+          <div className="quote">Heard: “{item.evidence}”</div>
+        )}
+        {!resolved && item.high_risk && (
+          <p className="risk-note">High risk — no suggested answer. Write this one yourself.</p>
         )}
       </div>
-      <span className="status">
-        {item.high_risk && !resolved && item.evidence ? 'Practitioner entry' : BADGE_FOR[item.state]}
-      </span>
+      <span className="status">{BADGE_FOR[item.state]}</span>
     </article>
   )
 }

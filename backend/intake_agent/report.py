@@ -21,6 +21,8 @@ def build(session: SessionState) -> dict:
     template = session.template
     required = set(template.required_ids(session.slots))
 
+    destinations = {f["item_id"]: f.get("destination", "") for f in session.followups}
+
     sections = []
     for section_id, section_title in template.section_order:
         entries = []
@@ -32,7 +34,7 @@ def build(session: SessionState) -> dict:
                 "item_id": item.id,
                 "prompt": item.prompt,
                 "state": slot.get("state", "open"),
-                "text": _entry_text(item, slot),
+                "text": _entry_text(item, slot, destinations.get(item.id, "")),
                 "evidence": slot.get("evidence", ""),
                 "high_risk": item.high_risk,
                 "written_by": slot.get("source", ""),
@@ -55,15 +57,17 @@ def build(session: SessionState) -> dict:
     }
 
 
-def _entry_text(item, slot: dict) -> str:
+def _entry_text(item, slot: dict, destination: str = "") -> str:
     state = slot.get("state")
     if state == ANSWERED:
         return slot.get("value") or slot.get("evidence") or ""
     if state == DECLINED:
         return f"Declined. Reason recorded: {slot.get('reason') or 'none given'}."
     if state == ESCALATED:
-        return (f"Not resolved during the visit. Follow-up action filed: "
-                f"{slot.get('reason') or 'no reason recorded'}.")
+        # The destination is the useful fact. The reason is usually "not
+        # recorded during the visit", which restates the sentence before it.
+        where = f" to {destination}" if destination else ""
+        return f"Not resolved during the visit. Follow-up action filed{where}."
     # Only reachable if the gate was bypassed; say so rather than leave a blank.
     return "No recorded answer."
 
