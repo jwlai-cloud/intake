@@ -116,8 +116,10 @@ cd eval && uv run python run_eval.py         # 47 labelled cases, real Vertex ca
 ```
 
 `run_eval.py` prints a confusion matrix and **exits non-zero if any answer
-labelled insufficient was marked sufficient**. Current score: **46/47, precision
-on `sufficient` 100%** over 47 cases, with one deliberate non-critical miss.
+labelled insufficient was marked sufficient**. Current score: **precision on `sufficient` 100%** — the gate property, and the
+number that is stable. Accuracy moves between runs (45–46 of 47): the
+adjudicator is occasionally stricter than a labelled case, and every such miss
+is a false *insufficient*, which costs one extra question and never a wrong tick over 47 cases, with one deliberate non-critical miss.
 Do not move on to the UI until this passes.
 
 ### 3. Run it locally

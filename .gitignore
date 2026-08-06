@@ -33,3 +33,7 @@ artifacts/
 
 # Rehearsal output — regenerate, do not commit
 demo/rehearsal/
+
+# Demo build artefacts — regenerate, do not commit
+demo/build/
+demo/voice-cache/

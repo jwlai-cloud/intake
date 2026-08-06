@@ -40,7 +40,7 @@ node ~/.claude/skills/archify/bin/archify.mjs deliver architecture \
 | Agent service | FastAPI + ADK Python 2.6.2 | HTTP surface, turn orchestration, gate, report assembly | Built |
 | Turn pipeline | ADK custom `BaseAgent` (`TurnPipeline`) | transcribe → route → adjudicate → coach | Built |
 | Router | `gemini-3.6-flash`, schema-constrained | Which open items does this chunk bear on? | Built |
-| Adjudicator | `gemini-3.6-flash` via Vertex AI, schema-constrained | Answer-level judgement, one call per item | Built, 46/47 on eval |
+| Adjudicator | `gemini-3.6-flash` via Vertex AI, schema-constrained | Answer-level judgement, one call per item | Built, precision 100% on eval |
 | Session store | Firestore, with in-memory fallback | Durable slot state, follow-ups, highlights | Built |
 | Templates | JSON config | The entire vertical | Two shipped |
 
@@ -139,8 +139,9 @@ and dodged* and *never came up* — and without it the UI quotes a remark about
 falls underneath the continence item.
 
 Correctness is measured, not assumed. See `eval/`. The bar: never mark an
-answer sufficient that a labelled case marks insufficient. Current: **46/47 over
-47 cases, precision on `sufficient` 100%**. Twelve of those cases are
+answer sufficient that a labelled case marks insufficient. Current: **precision on `sufficient` 100%**, the property the gate depends on.
+Accuracy varies 45–46 of 47 between runs; every miss is a false *insufficient*,
+never a false tick. Twelve of those cases are
 adversarial, and one of them found a real defect the first time it ran: a
 retracted answer being read as a clean nil return.
 

@@ -42,6 +42,23 @@ export default function App() {
       setError('Cannot reach the agent service. Is the backend running on :8000?'))
   }, [])
 
+  // Resume an existing session from ?session=<id>. Two uses: a dropped
+  // connection is recovered by reloading rather than losing the interview, and
+  // a demo can open already part-way through instead of filming its own setup.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('session')
+    if (!id || session) return
+    api.readSession(id)
+      .then((s) => {
+        setSession(s)
+        queue.current = new ChunkQueue(s.session_id, setSession, setQueued)
+      })
+      .catch((err) => setError(
+        err.status === 401
+          ? 'Enter the access code, then reload to resume this session.'
+          : `Could not resume session ${id}.`))
+  }, [session])
+
   useEffect(() => {
     if (!recording) return
     const t = setInterval(() => setElapsed((e) => e + 1), 1000)
