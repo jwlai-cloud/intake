@@ -53,17 +53,35 @@ Budget the full 4:00. Nothing is padded and nothing is rushed.
 
 | | Régime | Time |
 |---|---|---|
-| Hook | edited, tight | 0:00–0:22 |
-| **Live window** | **unedited, real time** | **0:22–2:47** |
-| Architecture | edited | 2:47–3:17 |
-| Template swap + eval | edited | 3:17–3:47 |
-| Close | edited | 3:47–4:00 |
+| Hook | edited, tight | 0:00–0:20 |
+| **Live window** | **unedited, real time** | **0:20–1:55** |
+| Architecture | edited | 1:55–2:35 |
+| Template swap | edited | 2:35–2:55 |
+| Eval running | edited | 2:55–3:25 |
+| Report walk-through | edited | 3:25–3:45 |
+| Close | edited | 3:45–4:00 |
+
+**Timings below are measured, not estimated.** `demo/rehearse.py` drives the
+deployed service through these exact beats and prints the second at which each
+item actually changes. Re-run it the morning of the take — model latency drifts,
+and a script written against guessed numbers falls apart live.
 
 ## The pacing problem, and the honest fix
 
-A chunk takes **19–23 seconds** end to end. Measured on the deployed service.
-Two answer beats therefore cost ~40s inside the live window that cannot be
-edited away — and should not be, because that is where the Cloud Run and
+A chunk takes **12–21 seconds** end to end, measured. The last rehearsal:
+
+```
+T+ 11.7s  turn 1: M14 Open → Mentioned
+T+ 27.6s  turn 2: M14 Mentioned → Answered, M15 appears
+T+ 42.5s  turn 3: M24 Open → Declined
+T+ 43.5s  gate refuses · 2 outstanding
+T+ 54.7s  report on screen
+          LIVE WINDOW TOTAL: 55s (typed) · ~75s with audio capture
+```
+
+That is far quicker than it first appeared, which is why the live window now
+carries three answer beats and all three resolution states rather than two.
+The waits are still real and still on camera — they are where the Cloud Run and
 Firestore proof lives.
 
 `01-build-plan.md:47` already had the answer: **don't shrink the form to fit
@@ -115,51 +133,50 @@ edited out of an unedited take.
 
 ## Shot list — 4:00
 
-### Act 1 · The friction (0:00–0:22) — *edited, tight*
+### Act 1 · The friction (0:00–0:20) — *edited*
 
 | # | Time | On screen | Said |
 |---|---|---|---|
-| 1 | 0:00–0:14 | Title card, cut to the app at 11 of 15 | "A community nurse has ninety minutes and a form she is legally required to complete. She asks about falls. The answer is *'oh, I've had a couple of wobbles.'* Every AI scribe on the market ticks that item. It was mentioned. It was never answered." |
-| 2 | 0:14–0:22 | The ring: 11 of 15 | "I've already run part of this interview. Everything from here is one continuous take, real time, no speed-ups." |
+| 1 | 0:00–0:13 | Title card → the app at 11 of 14 | "A community nurse has ninety minutes and a form she is legally required to complete. She asks about falls. The answer is *'oh, I've had a couple of wobbles.'* Every AI scribe on the market ticks that item. It was mentioned. It was never answered." |
+| 2 | 0:13–0:20 | The ring: 11 of 14 | "I've already run part of this interview. From here it's one continuous take, real time, no speed-ups." |
 
-### Act 2 · The live window (0:22–2:47) — *unedited, one take, real time*
+### Act 2 · The live window (0:20–1:55) — *unedited, one take*
 
-**Press record once at 0:22. Do not stop until the report is on screen.**
-Everything in this act is the agent performing its task, which is exactly what
-the Proof of Action criterion is asking to see.
+**Press record once. Do not stop until the report is on screen.** All three
+resolution states — answered, declined, escalated — happen inside this window.
 
 | # | Time | On screen | Said / done |
 |---|---|---|---|
-| 3 | 0:22–0:33 | Click **Start recording**; red indicator | *"Have you had any falls in the last year?"* → *"Oh, I've had a couple of wobbles."* |
-| 4 | 0:33–0:53 | **Cloud Run → Logs**, requests arriving | "While it works — this is Cloud Run, in my project, right now. Each chunk runs an ADK pipeline: transcribe, route the chunk to the items it's actually about, then one Vertex AI call per open item, in parallel." Hold the log lines legible 3s+. |
-| 5 | 0:53–1:08 | Back. **M14 amber: MENTIONED** | "There. Not answered — *mentioned*. Still missing: the number of falls, and the circumstances of the most recent one. And it quotes what it heard." **Then stop talking for three seconds.** |
-| 6 | 1:08–1:20 | Next-question card | "It's written the question to ask next — and only the question. For a high-risk item it drafts no answer at all. That's the output schema, not a prompt." |
-| 7 | 1:20–1:32 | Ask it | *"How many times, and what happened the last one?"* → *"Three times since Christmas. The last one was in May, I slipped coming down the stairs."* |
-| 8 | 1:32–1:52 | **Firestore → `sessions` → the live doc**, scrolled to `slots` | "State lives here — one document, one slot per required item. Not the transcript. That's why a three-hour interview costs the same per chunk as a ten-minute one." Watch `M14` flip in the console. |
-| 9 | 1:52–2:06 | Back. **M14 green: ANSWERED**, **M15 appears** | "Now it counts. And answering it *opened a new required item* — injury from that fall — which wasn't on the form until there was a fall to ask about. Fourteen became fifteen." |
-| 10 | 2:06–2:16 | **Finish & generate report** → gate modal | "She asks for the report. It refuses." |
-| 11 | 2:16–2:31 | Hover the **disabled** decline, then click **Escalate** | "Three ways to close an item: ask now, record a formal decline — and the form itself decides which items may be declined — or escalate." |
-| 12 | 2:31–2:47 | Follow-up drafted and routed → report appears | "The agent writes the follow-up itself and routes it. Occupational therapy queue. Nothing is ever left silently blank." **Stop recording here.** |
+| 3 | 0:20–0:31 | **Start recording**, red indicator | *"Have you had any falls in the last year?"* → *"Oh, I've had a couple of wobbles."* |
+| 4 | 0:31–0:45 | **Cloud Run → Logs**, requests arriving | "This is Cloud Run, in my project, right now. Each chunk runs an ADK pipeline: transcribe, route the chunk to the items it's about, then one Vertex AI call per open item, in parallel." |
+| 5 | 0:45–0:58 | Back. **M14 amber: MENTIONED** *(~12s after the answer)* | "There. Not answered — *mentioned*. Still missing: the number of falls, and the circumstances of the most recent one. And it quotes what it heard." **Then three seconds of silence.** |
+| 6 | 0:58–1:08 | Next-question card | "It's written the question to ask next — and only the question. For a high-risk item it drafts no answer at all. That's the output schema, not a prompt." |
+| 7 | 1:08–1:18 | Ask it | *"How many times, and what happened the last one?"* → *"Three times since Christmas. The last one was in May, I slipped coming down the stairs."* |
+| 8 | 1:18–1:30 | **Firestore → the live document**, at `slots` | "State lives here — one document, one slot per required item. Not the transcript. That's why a three-hour interview costs the same per chunk as a ten-minute one." |
+| 9 | 1:30–1:40 | Back. **M14 green: ANSWERED**, **M15 appears** *(~16s)* | "Now it counts. And answering it *opened a new required item* — injury from that fall — which wasn't on the form until there was a fall to ask about." |
+| 10 | 1:40–1:48 | Ask about alcohol | *"Can I ask how much you drink in a week?"* → *"That's my own business, thank you. Put down that I'd rather not say."* → **M24: DECLINED** *(~15s)* |
+| 11 | 1:48–1:55 | **Finish** → gate, 2 outstanding. Hover the **disabled** decline, click **Escalate** | "Declined is a real resolution, not a gap — and the form decides which items may be declined at all. For the rest: the agent writes the follow-up itself and routes it. Nothing is left silently blank." **Stop recording once the report appears.** |
 
-### Act 3 · Architecture (2:47–3:17) — *edited · explicitly scored*
-
-| # | Time | On screen | Said |
-|---|---|---|---|
-| 13 | 2:47–3:02 | `intake-architecture.html` | "Two choices worth defending. The slot state is the state, not the transcript — context stays bounded, so length never degrades it. And adjudication is one isolated call per open item, fanned out: a wrong verdict on one item can't corrupt another, and every item is separately scoreable." |
-| 14 | 3:02–3:17 | `intake-sequence.html`, the adjudicate row | "And the agent never authors domain content. Its output schema has no field an answer could go in — a rule enforced by a type, not by asking a model nicely." |
-
-### Act 4 · Proof (3:17–3:47) — *edited, cut tight*
+### Act 3 · Architecture (1:55–2:35) — *edited · explicitly scored*
 
 | # | Time | On screen | Said |
 |---|---|---|---|
-| 15 | 3:17–3:29 | **New session** → **Property damage · loss adjuster** | "Same engine, different profession. Escape of water, habitability, previous claims. No code changed — the vertical is a JSON template." |
-| 16 | 3:29–3:47 | Terminal: run the eval. **Cut the 26s wait**; land on the matrix | "And it's measured. Forty-seven labelled cases, real Vertex calls. Forty-six of forty-seven — and a hundred percent precision on 'sufficient'. It has never ticked an answer a human labelled insufficient." |
+| 12 | 1:55–2:15 | `intake-architecture.html` | "Two choices worth defending. The slot state is the state, not the transcript — context stays bounded, so length never degrades it. And adjudication is one isolated call per open item, fanned out: a wrong verdict on one item can't corrupt another, and every item is separately scoreable." |
+| 13 | 2:15–2:35 | `intake-sequence.html`, the adjudicate row | "And the agent never authors domain content. Its output schema has no field an answer could go in — enforced by a type, not by asking a model nicely." |
 
-### Act 5 · Close (3:47–4:00)
+### Act 4 · Proof (2:35–3:45) — *edited, cut tight*
 
 | # | Time | On screen | Said |
 |---|---|---|---|
-| 17 | 3:47–4:00 | Closing card, held still | "Every competitor ticks on mention. Intake ticks on answered." |
+| 14 | 2:35–2:55 | **New session** → **Property damage · loss adjuster** | "Same engine, different profession. Escape of water, habitability, previous claims. No code changed — the vertical is a JSON template." |
+| 15 | 2:55–3:25 | Terminal: eval running. **Cut the 26s wait**; land on the matrix | "And it's measured. Forty-seven labelled cases, real Vertex calls. Forty-six of forty-seven — and a hundred percent precision on 'sufficient'. It has never ticked an answer a human labelled insufficient." |
+| 16 | 3:25–3:45 | Report, scrolled to **Follow-ups filed** | "The report is assembled from what was recorded — no model call in it. Every unresolved item became a filed action with a destination." |
+
+### Act 5 · Close (3:45–4:00)
+
+| # | Time | On screen | Said |
+|---|---|---|---|
+| 17 | 3:45–4:00 | Closing card, held still | "Every competitor ticks on mention. Intake ticks on answered." |
 
 ## The closing card
 

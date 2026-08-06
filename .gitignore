@@ -30,3 +30,6 @@ build/
 
 # agents-cli eval output — regenerate, don't commit
 artifacts/
+
+# Rehearsal output — regenerate, do not commit
+demo/rehearsal/

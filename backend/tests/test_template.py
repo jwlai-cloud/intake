@@ -105,3 +105,31 @@ def test_duplicate_item_ids_are_rejected_at_load():
                 ],
             }
         )
+
+
+def test_the_medication_condition_reads_meaning_not_keywords():
+    """M05 opens when someone else prepares the doses, or adherence is shaky.
+
+    Pinned because the original pattern contained a bare "miss", which matched
+    "I take them with breakfast and never miss" — the exact opposite of what it
+    was looking for, and it silently added a required item to every session.
+    """
+    import re
+    t = Template.load("community-nursing-v1")
+    pattern = t["M05"].depends_on["pattern"]
+
+    opens = [
+        "I do forget the evening one two or three times a week.",
+        "My daughter helps me with the box.",       # someone else prepares them
+        "She helps me with the dosette box.",
+        "I'm not sure what half of them are for.",
+        "Someone else sets them out for me.",
+    ]
+    stays_shut = [
+        "Ramipril and atorvastatin, I take them with breakfast and never miss.",
+        "I manage them all myself, always have.",
+    ]
+    for text in opens:
+        assert re.search(pattern, text), f"should have opened M05: {text}"
+    for text in stays_shut:
+        assert not re.search(pattern, text), f"should not have opened M05: {text}"

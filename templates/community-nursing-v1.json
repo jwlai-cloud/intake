@@ -40,7 +40,7 @@
           "depends_on": {
             "item": "M04",
             "when": "answered_and_matches",
-            "pattern": "(?i)forget|miss|not sure|help|someone"
+            "pattern": "(?i)\\bforget|\\bforgot|\\bnot sure\\b|\\bhelps? me\\b|someone else|dosette|blister"
           }
         }
       ]
