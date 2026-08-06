@@ -5,6 +5,80 @@ entry at the top.
 
 ---
 
+## 2026-08-06 (afternoon) — browser-verified, audio fixed, demo scripted
+
+**Eval 46/47 · behavioural eval 5/5 · 66 backend tests.** Deployed and working
+end to end through the real UI.
+
+**Done since the last entry**
+
+- **Behavioural eval** with `agents-cli` over the turn pipeline. Its first clean
+  run found an ADR-0006 hole: the coach had emitted a highlight titled "Formal
+  decline to answer alcohol question" — the schema forbids an answer *field*,
+  not an interpretive *label*. Titles are now bare noun phrases. 5/5 after.
+- **Replaced SequentialAgent** with our own `TurnPipeline`. Forced, not
+  cosmetic: ADK's deprecated orchestrator emits a content-less event and
+  `agents-cli eval generate` rejects those outright, so behavioural evaluation
+  was impossible until it went (ADR-0010).
+- **Security review** (0 critical, 3 high, 5 medium, 5 low). Fixed the highs:
+  unbounded request body — the largest denial-of-wallet lever, since `text` is
+  fed verbatim into every model call; a gate that failed *open* on an empty
+  secret; and provider exception text reaching logs and clients, which was
+  writing verbatim interviewee speech into Cloud Logging.
+- **Access code is typed, not built in.** Vite inlines env vars, so a
+  `VITE_API_KEY` would have shipped readable in the bundle. Plus constant-time
+  comparison and a 20/min per-key limit.
+- **Auth roadmap** as ADR-0012, with `auth.py` as an inert seam. The review's
+  point stands and is recorded: Firebase Auth alone does *not* close the IDOR —
+  the migration must carry `owner_uid`.
+- **Three interactive diagrams** under `docs/diagrams/`, generated from checked
+  specs: architecture, handshake sequence, ADK orchestration.
+- **Audio path fixed.** `MediaRecorder.start(timeslice)` emits a fragmented
+  stream — only the first blob has a container header, so every later chunk was
+  arriving undecodable and coming back `degraded`. An interview would have
+  processed its first 18 seconds and silently dropped the rest. Each interval
+  now gets its own recorder. Verified against the deployed service with real
+  speech: chunk 1 leaves M14 partial, chunk 2 answers it.
+- **UI verified in a browser** for the first time, which exposed two defects:
+  high-risk items never showed the "MENTIONED" state the whole pitch is about,
+  and resolving the last gate item left an empty modal blocking the report.
+- **`docs/demo-script.md`** — shot-by-shot, built around the measured latency.
+
+**Measured on the deployed service**
+
+| | |
+|---|---|
+| Chunk end to end | 19-23s |
+| Gate refusal | 0.5s |
+| Agent-drafted escalation | 4.7s |
+
+Processing is slower than an 18s capture interval, so the queue drifts. The
+demo script fills the wait with the Cloud Run and Firestore views the contest
+requires anyway, and `VITE_CHUNK_MS` shortens it for recording.
+
+**Known issues**
+
+1. Evidence bleed is reduced, not gone - "wobbles" still lands on M06 as well
+   as M14. Both correctly stay open, so it is cosmetic, but it is visible.
+2. IDOR: any key holder can read any session id. Closes with ADR-0012 step 2.
+3. Firestore TTL on `sessions/` not set - the retention half of the ADR-0007
+   claim.
+4. No Cloud Trace or prompt-response logging (`google-agents-cli-observability`
+   untouched) - would strengthen the video's Google Cloud proof.
+5. Live human speech through a real microphone still untested; only synthesised.
+
+**Next, in priority order**
+
+1. Rehearse and record the demo. The phrasings in the script are pre-tested;
+   do not improvise them.
+2. Devpost registration, and the $150 credits form - **closes 28 Aug**.
+   Claiming around 9 Aug leaves ample margin even at 72 business hours.
+3. Push the repo public.
+4. Firestore TTL policy; Cloud Trace.
+5. Firebase Auth (ADR-0012 step 1), then session ownership.
+
+---
+
 ## 2026-08-06 — deployed on Cloud Run, on the personal project
 
 **Live:** https://intake-agent-320877670799.us-central1.run.app
