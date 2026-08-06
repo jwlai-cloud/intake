@@ -36,8 +36,14 @@ Replace the shared secret with **Firebase Authentication**.
   Nothing about JWTs is hand-rolled and no OAuth flow is implemented by us.
 - **`practitioner_id` becomes the token's `uid`**, established server-side. The
   client can no longer assert who it is.
-- Every session document gains an owner, and reads and writes are checked
-  against `uid` — closing the guess-any-session hole.
+- **Every session document gains an `owner_uid`, stamped at creation and
+  compared in `get_session`.** This is not optional garnish on the migration: a
+  security review found that `practitioner_id` is stored today and then never
+  consulted, so any key holder can read, mutate and finalise *any* session id —
+  including the verbatim quotes, which are the most sensitive content the
+  system holds. Firebase Auth alone does not fix that. Without the ownership
+  check it swaps one credential for a better one and every authenticated user
+  still reads every session.
 - Entitlement lives at `entitlements/{uid}` in Firestore, written by a
   **RevenueCat webhook**, and is checked before any turn runs. The client is
   never asked whether it has paid.
@@ -67,6 +73,7 @@ Sequenced so each step is independently useful, and safest first:
 
 1. Firebase Auth verification replacing the shared secret. Deletes the current
    weakness on its own.
-2. Session ownership by `uid`, and per-`uid` rate limiting.
+2. Session ownership by `uid`, and per-`uid` rate limiting. The rate-limit
+   bucket key moves off the hashed shared secret at the same time.
 3. RevenueCat webhook and the entitlement check. Last, because it is the only
    one whose absence costs nothing.

@@ -145,12 +145,18 @@ printf 'choose-a-long-random-string' | gcloud secrets create intake-api-key --da
 Then build the client against it:
 
 ```bash
-cd web && VITE_API_BASE=https://intake-agent-xxxx.run.app VITE_API_KEY=... npm run build
+cd web && VITE_API_BASE=https://intake-agent-xxxx.run.app npm run build
 ```
 
-The service deploys `--no-allow-unauthenticated` and requires an
-`X-Intake-Key` header. Every endpoint spends money on Vertex AI, so an
-ungated deployment is an open wallet.
+**The access code is never built in.** Vite inlines `import.meta.env.*` at build
+time, so a `VITE_API_KEY` would ship readable inside the JS bundle — a published
+credential to an endpoint that spends money on Vertex AI per request. The app
+asks for the code instead and keeps it in `sessionStorage` for that tab only.
+
+Every request that costs money requires `X-Intake-Key` and is rate limited per
+key. The service refuses to start ungated: with no `INTAKE_API_KEY` set it
+answers 503 unless `INTAKE_ALLOW_UNGATED=1` is set explicitly, which belongs in
+local `.env` and never in a deploy.
 
 ## Templates
 
@@ -189,9 +195,17 @@ published standards.
 
 ## Privacy by architecture
 
-Intake stores **no identity of the person being interviewed** — no names, no
-identifiers, no per-subject history. Sessions are scoped to a job, not a
-person, and the transcript can be discarded on session close.
+Intake **never solicits, indexes or keys on the identity of the person being
+interviewed.** There is no name field, no subject identifier, and no
+per-subject history; sessions are scoped to a job, not a person.
+
+Stated precisely, because the honest version is narrower than the slogan:
+recorded answers are **verbatim quotes**, and a real interviewee may say a name
+in passing — *"my daughter Sarah drives me on Mondays"*. That span is stored as
+spoken, because quoting exactly is the evidence the product rests on and
+redacting it would break adjudication. What follows from that is a retention
+answer rather than a redaction one: quotes live in the session document, they
+are never copied into logs, and they are deleted when the session is.
 
 Persistent memory is scoped to the *practitioner*: which highlight categories
 she dismisses, how she phrases questions, her report voice.

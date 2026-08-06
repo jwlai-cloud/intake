@@ -25,6 +25,7 @@ import asyncio
 import json
 import logging
 import os
+import uuid
 from typing import Any, AsyncGenerator
 
 from google.adk.agents import BaseAgent, LlmAgent, SequentialAgent
@@ -200,7 +201,8 @@ class AdjudicationAgent(BaseAgent):
                 if isinstance(verdict, Exception):
                     # One item failing must not lose the whole chunk. The item
                     # simply stays open and the next chunk retries it.
-                    log.warning("adjudication failed for %s: %s", item.id, verdict)
+                    log.warning("adjudication failed for %s (%s)",
+                                item.id, type(verdict).__name__)
                     continue
                 if not verdict.addressed:
                     continue  # this chunk said nothing about the item
@@ -380,7 +382,11 @@ class TurnRunner:
             if h.get("item_id") not in session.template.items:
                 continue  # the coach may not invent items
             highlights.append({
-                "id": f"{session_id}-{len(session.highlights) + n}",
+                # Not count-based: add_highlights dedupes on quote, so the
+                # count after a batch is not len(before) + n, and a later batch
+                # could mint an id that already exists. set_highlight_status
+                # updates every match, so one confirm would confirm two.
+                "id": uuid.uuid4().hex[:8],
                 "item_id": h["item_id"],
                 "title": h.get("title", ""),
                 "quote": h.get("quote", ""),

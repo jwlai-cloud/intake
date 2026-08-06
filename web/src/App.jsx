@@ -158,7 +158,9 @@ function Landing({ templates, onBegin, error }) {
           <h2>Ready when the interview begins</h2>
           <p>
             Required items appear here as they are raised and <b>substantively
-            answered</b>. No interviewee identity is recorded at any point.
+            answered</b>. No interviewee identity is asked for or indexed —
+            answers are stored as the quotes they were spoken in, and go when
+            the session does.
           </p>
           <AccessCodeField />
           {error && <p className="missing">{error}</p>}

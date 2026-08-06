@@ -147,8 +147,16 @@ whole coverage view arrives in one realtime snapshot and each chunk is a single
 atomic write. Templates have tens of items, so the 1MiB document ceiling is not
 in play.
 
-**No interviewee identity is stored anywhere** (ADR-0007), and a test asserts
-it.
+**No interviewee identity is solicited, indexed, or used as a key** (ADR-0007),
+and a test asserts the schema has no field for one.
+
+The precise version: `evidence`, `value`, `quote` and `recent_turns` hold
+verbatim interviewee speech, which can contain a name said in passing. Quoting
+exactly is the product, so this is a retention question, not a redaction one —
+the spans stay in the session document, are never written to logs (provider
+exceptions are logged by type only, since a Vertex 400 echoes the request body),
+and go when the session goes. A Firestore TTL policy on `sessions/` is the
+outstanding piece.
 
 ## External dependencies
 

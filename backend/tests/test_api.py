@@ -9,6 +9,9 @@ from intake_agent.store import MemoryStore
 
 @pytest.fixture
 def client(monkeypatch):
+    # The service fails closed when INTAKE_API_KEY is unset, so the ungated
+    # path has to be asked for explicitly — that is the point of the flag.
+    monkeypatch.setenv("INTAKE_ALLOW_UNGATED", "1")
     store = MemoryStore()
     main.configure_for_tests(store)
     monkeypatch.setattr(main, "_store", store)
@@ -199,6 +202,38 @@ def test_a_wrong_key_costs_nothing_and_does_not_burn_the_real_budget(client, mon
                       headers={"X-Intake-Key": "wrong"}).status_code == 401
     assert c.post("/sessions", json=body,
                   headers={"X-Intake-Key": "s3cret"}).status_code == 200
+
+
+def test_the_service_refuses_to_serve_ungated_by_accident(client, monkeypatch):
+    # An empty secret version, or a deploy that drops --set-secrets, must not
+    # quietly publish a Vertex-spending endpoint. Only the explicit local flag
+    # opens it.
+    c, _ = client
+    monkeypatch.delenv("INTAKE_API_KEY", raising=False)
+    monkeypatch.delenv("INTAKE_ALLOW_UNGATED", raising=False)
+    body = {"template_id": "community-nursing-v1", "practitioner_id": "p1"}
+    assert c.post("/sessions", json=body).status_code == 503
+
+    monkeypatch.setenv("INTAKE_API_KEY", "")   # empty secret payload
+    assert c.post("/sessions", json=body).status_code == 503
+
+
+def test_an_oversized_text_chunk_is_rejected_before_any_model_call(client):
+    # `text` is fed verbatim into every model call in the turn, so an unbounded
+    # string here is the biggest denial-of-wallet lever in the service.
+    c, _ = client
+    s = new_session(c)
+    r = c.post(f"/sessions/{s['session_id']}/chunks",
+               json={"seq": 1, "text": "a" * 5000})
+    assert r.status_code == 422
+
+
+def test_a_traversing_template_id_cannot_probe_the_filesystem(client):
+    c, _ = client
+    for probe in ("../../../../etc/passwd", "../../pyproject", "..%2f..%2fetc"):
+        r = c.post("/sessions", json={"template_id": probe, "practitioner_id": "p1"})
+        assert r.status_code == 400, probe
+        assert "/" not in r.json()["detail"].split("(have:")[0].replace(probe, "")
 
 
 def test_unknown_session_is_a_404(client):

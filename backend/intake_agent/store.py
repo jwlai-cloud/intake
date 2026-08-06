@@ -137,7 +137,10 @@ class BaseStore:
     def create(self, template_id: str, practitioner_id: str) -> SessionState:
         Template.load(template_id)  # fail fast on an unknown template
         state = SessionState(
-            session_id=uuid.uuid4().hex[:12],
+            # Full length, not truncated. The id *is* the capability until
+            # ADR-0012 puts an owner on the document, so there is no reason to
+            # throw away half its entropy.
+            session_id=uuid.uuid4().hex,
             template_id=template_id,
             practitioner_id=practitioner_id,
         )
@@ -155,7 +158,11 @@ class BaseStore:
         state = self._load(session_id)
         if seq in state.processed_chunks:
             return False
-        state.processed_chunks.append(seq)
+        # Bounded: `seq` is client-controlled and every value was appended
+        # forever, so a long enough run pushed the document past Firestore's
+        # 1MiB ceiling and bricked the session. The window only needs to cover
+        # the browser's local replay queue.
+        state.processed_chunks = (state.processed_chunks + [seq])[-256:]
         state.updated_at = _now()
         self._save(state)
         return True

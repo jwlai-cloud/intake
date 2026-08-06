@@ -84,7 +84,8 @@ def route(items: list[Item], turns: list[str], *, model: str = DEFAULT_MODEL,
         )
         wanted = set(json.loads(resp.text).get("item_ids", []))
     except Exception as exc:
-        log.warning("routing failed (%s) — adjudicating every open item", exc)
+        log.warning("routing failed (%s) — adjudicating every open item",
+                    type(exc).__name__)
         return list(items)
 
     # The router may only select from what it was given; it cannot invent an id.

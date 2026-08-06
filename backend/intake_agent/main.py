@@ -62,7 +62,15 @@ def require_api_key(x_intake_key: str | None = Header(default=None)) -> None:
     """
     expected = os.environ.get("INTAKE_API_KEY")
     if not expected:
-        return
+        # Fail closed. An empty secret version, or a deploy that drops
+        # --set-secrets, would otherwise mount cleanly and publish an
+        # unauthenticated, unrated, Vertex-spending endpoint to the internet —
+        # with /health still cheerfully reporting ok. Local work opts out
+        # explicitly instead.
+        if os.environ.get("INTAKE_ALLOW_UNGATED") == "1":
+            return
+        raise HTTPException(status_code=503,
+                            detail="service is not configured with an API key")
     if not x_intake_key or not secrets.compare_digest(x_intake_key, expected):
         raise HTTPException(status_code=401, detail="bad or missing X-Intake-Key")
     _rate_limit(x_intake_key)
@@ -113,18 +121,27 @@ class NewSession(BaseModel):
 
 
 class Chunk(BaseModel):
+    # Bounds are enforced by Pydantic before the handler runs, so an oversized
+    # body is rejected without ever being base64-decoded. The MAX_AUDIO_BYTES
+    # check further down only fires after decode has already allocated the
+    # buffer, which is too late to protect memory.
+    #
+    # `text` matters more than it looks: it is fed verbatim into every model
+    # call in the turn — transcriber, router, N adjudicators, coach — so an
+    # unbounded string here is the largest denial-of-wallet lever in the
+    # service. A chunk of speech is a couple of hundred characters.
     seq: int = Field(ge=0)
-    audio_b64: str | None = None
-    mime_type: str = "audio/webm"
-    text: str | None = None  # typed fallback; also what the tests drive
+    audio_b64: str | None = Field(default=None, max_length=4 * MAX_AUDIO_BYTES // 3 + 4)
+    mime_type: str = Field(default="audio/webm", max_length=64)
+    text: str | None = Field(default=None, max_length=4000)
 
 
 class Resolution(BaseModel):
-    item_id: str
-    resolution: str  # answered | declined | escalated
-    reason: str = ""
-    destination: str = ""
-    value: str = ""
+    item_id: str = Field(max_length=64)
+    resolution: str = Field(max_length=32)  # answered | declined | escalated
+    reason: str = Field(default="", max_length=2000)
+    destination: str = Field(default="", max_length=200)
+    value: str = Field(default="", max_length=4000)
 
 
 class HighlightUpdate(BaseModel):
@@ -208,8 +225,18 @@ async def post_chunk(session_id: str, body: Chunk) -> dict:
     except Exception as exc:
         # Never lose the session over one bad chunk. The client keeps recording
         # and the next chunk retries the same open items.
-        log.exception("chunk %s failed for session %s", body.seq, session_id)
-        return _view(_store.get(session_id)) | {"degraded": True, "error": str(exc)[:200]}
+        # Type only, never str(exc). A Vertex 400 echoes the offending request,
+        # and the adjudicator's request body is verbatim interviewee speech —
+        # so logging the message writes transcript into Cloud Logging, which
+        # outlives the session document and sits outside every promise
+        # ADR-0007 makes about where interview content lives. The same text
+        # returned to the client would also disclose project and model.
+        log.error("chunk %s failed for session %s (%s)",
+                  body.seq, session_id, type(exc).__name__)
+        return _view(_store.get(session_id)) | {
+            "degraded": True,
+            "error": "turn failed; the next chunk retries the same open items",
+        }
 
     return _view(state)
 

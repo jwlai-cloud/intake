@@ -66,6 +66,15 @@ class Template:
     @staticmethod
     @functools.lru_cache(maxsize=8)
     def load(template_id: str) -> Template:
+        # Whitelist before touching the filesystem. `template_id` arrives in a
+        # request body, and joining it unsanitised makes "../../../etc/foo" an
+        # existence oracle over the whole container — the error differs for a
+        # path that exists but is not a template.
+        if template_id not in Template.available():
+            raise TemplateError(
+                f"no template {template_id!r} "
+                f"(have: {', '.join(Template.available()) or 'none'})"
+            )
         path = TEMPLATE_DIR / f"{template_id}.json"
         if not path.is_file():
             raise TemplateError(
