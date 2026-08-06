@@ -1,7 +1,7 @@
 # Demo video — shot script
 
 **Limit: 4:00** (`docs/strategy/02-rubric-fit.md` — "Demo video ≤4 min, public
-on YouTube/Vimeo, English"). **Target 3:50.** Re-check the rules page before
+on YouTube/Vimeo, English"). **Target 4:00 exactly.** Re-check the rules page before
 uploading; over a hard limit disqualifies on some platforms. **Uses the full
 four minutes — nothing padded, nothing rushed.**
 
