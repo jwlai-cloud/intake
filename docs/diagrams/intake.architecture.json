@@ -1,0 +1,412 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Intake — answer-level coverage for mandated interviews",
+    "subtitle": "One audio chunk in, one bounded turn out. Cloud Run · ADK 2.6.2 · Vertex AI · Firestore",
+    "output": "intake-architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      2140,
+      780
+    ],
+    "views": [
+      {
+        "id": "turn-path",
+        "label": "One chunk, one turn",
+        "focus": [
+          "practitioner",
+          "api",
+          "transcriber",
+          "router",
+          "adjudicator",
+          "coach"
+        ],
+        "note": "The path an 18-second audio chunk takes, start to finish."
+      },
+      {
+        "id": "the-product",
+        "label": "Where the judgement happens",
+        "focus": [
+          "router",
+          "adjudicator",
+          "vertex",
+          "firestore"
+        ],
+        "note": "Routing narrows the open items; adjudication judges each one alone."
+      },
+      {
+        "id": "nothing-blank",
+        "label": "Nothing leaves unanswered",
+        "focus": [
+          "api",
+          "gate",
+          "escalator",
+          "report"
+        ],
+        "note": "Every required item resolves to answered, declined, or escalated."
+      },
+      {
+        "id": "decoupling",
+        "label": "The vertical is config",
+        "focus": [
+          "templates",
+          "api",
+          "adjudicator"
+        ],
+        "note": "No nursing or insurance logic exists in code (ADR-0003)."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "practitioner",
+      "type": "external",
+      "label": "Practitioner",
+      "sublabel": "React web · iOS later",
+      "tag": "mic → 18s chunks",
+      "pos": [
+        60,
+        336
+      ],
+      "size": [
+        150,
+        76
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "FastAPI",
+      "sublabel": "Cloud Run · max 2 inst.",
+      "tag": "chunks · resolve · report",
+      "pos": [
+        340,
+        336
+      ],
+      "size": [
+        170,
+        76
+      ]
+    },
+    {
+      "id": "transcriber",
+      "type": "backend",
+      "label": "Transcriber",
+      "sublabel": "ADK LlmAgent",
+      "pos": [
+        640,
+        344
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "router",
+      "type": "backend",
+      "label": "Router",
+      "sublabel": "which items is this about?",
+      "pos": [
+        920,
+        344
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "adjudicator",
+      "type": "backend",
+      "label": "Adjudicator",
+      "sublabel": "1 call per open item, in parallel",
+      "tag": "answered, not mentioned",
+      "pos": [
+        1210,
+        332
+      ],
+      "size": [
+        190,
+        88
+      ]
+    },
+    {
+      "id": "coach",
+      "type": "backend",
+      "label": "Coach",
+      "sublabel": "next question · quotes",
+      "pos": [
+        1530,
+        344
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "vertex",
+      "type": "cloud",
+      "label": "Vertex AI",
+      "sublabel": "gemini-3.6-flash · schema-constrained",
+      "tag": "temperature 0",
+      "pos": [
+        950,
+        130
+      ],
+      "size": [
+        320,
+        76
+      ]
+    },
+    {
+      "id": "firestore",
+      "type": "database",
+      "label": "Firestore",
+      "sublabel": "slot state, not transcript",
+      "tag": "native · intake",
+      "pos": [
+        640,
+        556
+      ],
+      "size": [
+        180,
+        76
+      ]
+    },
+    {
+      "id": "templates",
+      "type": "external",
+      "label": "Template config",
+      "sublabel": "nursing · loss adjusting",
+      "tag": "zero domain logic in code",
+      "pos": [
+        340,
+        556
+      ],
+      "size": [
+        180,
+        76
+      ]
+    },
+    {
+      "id": "gate",
+      "type": "security",
+      "label": "Three-state gate",
+      "sublabel": "answered · declined · escalated",
+      "tag": "409 until resolved",
+      "pos": [
+        1810,
+        332
+      ],
+      "size": [
+        170,
+        88
+      ]
+    },
+    {
+      "id": "escalator",
+      "type": "backend",
+      "label": "Escalator",
+      "sublabel": "drafts + files follow-up",
+      "pos": [
+        1810,
+        150
+      ],
+      "size": [
+        170,
+        72
+      ]
+    },
+    {
+      "id": "report",
+      "type": "backend",
+      "label": "Report",
+      "sublabel": "assembled, never generated",
+      "tag": "no model call",
+      "pos": [
+        1810,
+        556
+      ],
+      "size": [
+        170,
+        76
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Google Cloud · agent-era · us-central1",
+      "wraps": [
+        "api",
+        "transcriber",
+        "router",
+        "adjudicator",
+        "coach",
+        "vertex",
+        "firestore",
+        "gate",
+        "escalator",
+        "report"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "X-Intake-Key · 20 req/min per key · fails closed",
+      "wraps": [
+        "api"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "chunk-post",
+      "from": "practitioner",
+      "to": "api",
+      "label": "POST chunk",
+      "variant": "emphasis",
+      "labelDx": 46
+    },
+    {
+      "id": "to-transcribe",
+      "from": "api",
+      "to": "transcriber",
+      "label": "run turn",
+      "variant": "emphasis"
+    },
+    {
+      "id": "transcribe-route",
+      "from": "transcriber",
+      "to": "router",
+      "variant": "emphasis"
+    },
+    {
+      "id": "route-adjudicate",
+      "from": "router",
+      "to": "adjudicator",
+      "label": "open items",
+      "variant": "emphasis"
+    },
+    {
+      "id": "adjudicate-coach",
+      "from": "adjudicator",
+      "to": "coach",
+      "label": "brief",
+      "variant": "emphasis"
+    },
+    {
+      "id": "transcriber-model",
+      "from": "transcriber",
+      "to": "vertex",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "router-model",
+      "from": "router",
+      "to": "vertex",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "adjudicator-model",
+      "from": "adjudicator",
+      "to": "vertex",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "coach-model",
+      "from": "coach",
+      "to": "vertex",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "verdicts",
+      "from": "adjudicator",
+      "to": "firestore",
+      "label": "verdicts",
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "id": "session-state",
+      "from": "api",
+      "to": "firestore",
+      "label": "session",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "config",
+      "from": "templates",
+      "to": "api",
+      "label": "items + guidance",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "ask-report",
+      "from": "coach",
+      "to": "gate",
+      "variant": "emphasis"
+    },
+    {
+      "id": "unresolved",
+      "from": "gate",
+      "to": "escalator",
+      "label": "unresolved",
+      "variant": "dashed"
+    },
+    {
+      "id": "produce",
+      "from": "gate",
+      "to": "report",
+      "label": "all resolved",
+      "labelDy": 78
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "The differentiator",
+      "items": [
+        "Competitors tick an item when it is mentioned",
+        "Intake ticks only when the guidance is satisfied",
+        "\"A couple of wobbles\" stays open; \"three falls, the last in May\" closes"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Bounded by design",
+      "items": [
+        "Slot state is the state, not the transcript (ADR-0002)",
+        "Coach reads a brief of open items, never a running transcript",
+        "A three-hour interview costs the same per chunk as a ten-minute one"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Measured, not assumed",
+      "items": [
+        "47 labelled cases · 46/47 · precision on sufficient 100%",
+        "Behavioural eval over the pipeline scores 5/5",
+        "66 backend tests, no network"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Failure is designed for",
+      "items": [
+        "Failed chunk POSTs queue locally and replay in order",
+        "A replayed sequence number is a no-op",
+        "One item's failure leaves it open; its neighbours still land"
+      ]
+    }
+  ]
+}

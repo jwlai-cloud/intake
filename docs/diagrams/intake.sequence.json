@@ -1,0 +1,365 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Intake — one chunk, and the gate at the end",
+    "subtitle": "18 seconds of audio through the ADK turn pipeline, then the three-state gate refusing a report",
+    "output": "intake-sequence.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1020,
+      1120
+    ],
+    "views": [
+      {
+        "id": "the-turn",
+        "label": "One chunk",
+        "focus": [
+          "practitioner",
+          "api",
+          "transcriber",
+          "router",
+          "adjudicator"
+        ],
+        "note": "Transcribe, route to the items this chunk is about, judge each one alone."
+      },
+      {
+        "id": "vague-answer",
+        "label": "Why it stays open",
+        "focus": [
+          "adjudicator",
+          "vertex",
+          "firestore",
+          "coach"
+        ],
+        "note": "\"A couple of wobbles\" is insufficient, so M14 becomes partial rather than answered."
+      },
+      {
+        "id": "the-gate",
+        "label": "The gate refuses",
+        "focus": [
+          "practitioner",
+          "api",
+          "escalator",
+          "firestore"
+        ],
+        "note": "409 with what is outstanding, then the agent drafts and files a follow-up."
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "practitioner",
+      "type": "external",
+      "label": "Practitioner",
+      "sublabel": "browser · mic"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "FastAPI",
+      "sublabel": "Cloud Run"
+    },
+    {
+      "id": "transcriber",
+      "type": "backend",
+      "label": "Transcriber",
+      "sublabel": "ADK stage 1"
+    },
+    {
+      "id": "router",
+      "type": "backend",
+      "label": "Router",
+      "sublabel": "ADK stage 2a"
+    },
+    {
+      "id": "adjudicator",
+      "type": "backend",
+      "label": "Adjudicator",
+      "sublabel": "ADK stage 2b"
+    },
+    {
+      "id": "coach",
+      "type": "backend",
+      "label": "Coach",
+      "sublabel": "ADK stage 3"
+    },
+    {
+      "id": "escalator",
+      "type": "backend",
+      "label": "Escalator",
+      "sublabel": "follow-up"
+    },
+    {
+      "id": "vertex",
+      "type": "cloud",
+      "label": "Vertex AI",
+      "sublabel": "gemini-3.6-flash"
+    },
+    {
+      "id": "firestore",
+      "type": "database",
+      "label": "Firestore",
+      "sublabel": "slot state"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 300,
+      "label": "Chunk arrives"
+    },
+    {
+      "from": 320,
+      "to": 652,
+      "label": "Route, then judge each item alone"
+    },
+    {
+      "from": 664,
+      "to": 800,
+      "label": "Coach the next question"
+    },
+    {
+      "from": 814,
+      "to": 998,
+      "label": "Finish — the gate refuses, then routes"
+    }
+  ],
+  "messages": [
+    {
+      "id": "post-chunk",
+      "from": "practitioner",
+      "to": "api",
+      "y": 188,
+      "label": "POST 18s audio · seq 7",
+      "variant": "emphasis"
+    },
+    {
+      "id": "claim-seq",
+      "from": "api",
+      "to": "firestore",
+      "y": 226,
+      "label": "claim seq 7 — replay is a no-op",
+      "variant": "security"
+    },
+    {
+      "id": "run-turn",
+      "from": "api",
+      "to": "transcriber",
+      "y": 268,
+      "label": "run turn",
+      "variant": "emphasis"
+    },
+    {
+      "id": "transcribe",
+      "from": "transcriber",
+      "to": "vertex",
+      "y": 352,
+      "label": "audio → speaker-attributed turns",
+      "variant": "default"
+    },
+    {
+      "id": "turns-back",
+      "from": "vertex",
+      "to": "transcriber",
+      "y": 388,
+      "label": "\"oh, I've had a couple of wobbles\"",
+      "variant": "return"
+    },
+    {
+      "id": "to-router",
+      "from": "transcriber",
+      "to": "router",
+      "y": 424,
+      "label": "interviewee turns only",
+      "variant": "emphasis"
+    },
+    {
+      "id": "route-call",
+      "from": "router",
+      "to": "vertex",
+      "y": 458,
+      "label": "which of 15 open items is this about?",
+      "variant": "default"
+    },
+    {
+      "id": "routed",
+      "from": "vertex",
+      "to": "router",
+      "y": 492,
+      "label": "M14, M06 — the other 13 are untouched",
+      "variant": "return"
+    },
+    {
+      "id": "to-adjudicator",
+      "from": "router",
+      "to": "adjudicator",
+      "y": 526,
+      "label": "2 items",
+      "variant": "emphasis"
+    },
+    {
+      "id": "judge",
+      "from": "adjudicator",
+      "to": "vertex",
+      "y": 560,
+      "label": "one schema-constrained call per item, in parallel",
+      "variant": "emphasis"
+    },
+    {
+      "id": "verdicts",
+      "from": "vertex",
+      "to": "adjudicator",
+      "y": 596,
+      "label": "M14 insufficient — no count, no circumstances",
+      "variant": "return"
+    },
+    {
+      "id": "write-slots",
+      "from": "adjudicator",
+      "to": "firestore",
+      "y": 632,
+      "label": "M14 → partial, with the quote",
+      "variant": "emphasis"
+    },
+    {
+      "id": "brief",
+      "from": "adjudicator",
+      "to": "coach",
+      "y": 674,
+      "label": "brief: open items + this chunk's quotes",
+      "variant": "default"
+    },
+    {
+      "id": "coach-call",
+      "from": "coach",
+      "to": "vertex",
+      "y": 708,
+      "label": "next question — never an answer",
+      "variant": "default"
+    },
+    {
+      "id": "question",
+      "from": "coach",
+      "to": "api",
+      "y": 744,
+      "label": "\"How many falls, and what happened?\"",
+      "variant": "return"
+    },
+    {
+      "id": "state-back",
+      "from": "api",
+      "to": "practitioner",
+      "y": 780,
+      "label": "coverage 1/15 · M14 still open",
+      "variant": "return"
+    },
+    {
+      "id": "ask-report",
+      "from": "practitioner",
+      "to": "api",
+      "y": 834,
+      "label": "POST /report",
+      "variant": "emphasis"
+    },
+    {
+      "id": "refuse",
+      "from": "api",
+      "to": "practitioner",
+      "y": 870,
+      "label": "409 — 3 items have no recorded answer",
+      "variant": "security"
+    },
+    {
+      "id": "escalate",
+      "from": "practitioner",
+      "to": "escalator",
+      "y": 906,
+      "label": "escalate M20",
+      "variant": "emphasis"
+    },
+    {
+      "id": "draft",
+      "from": "escalator",
+      "to": "vertex",
+      "y": 940,
+      "label": "draft the follow-up action",
+      "variant": "default"
+    },
+    {
+      "id": "filed",
+      "from": "escalator",
+      "to": "firestore",
+      "y": 974,
+      "label": "filed → Occupational therapy queue",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "api",
+      "from": 182,
+      "to": 786,
+      "type": "backend"
+    },
+    {
+      "participant": "transcriber",
+      "from": 262,
+      "to": 430,
+      "type": "backend"
+    },
+    {
+      "participant": "router",
+      "from": 418,
+      "to": 532,
+      "type": "backend"
+    },
+    {
+      "participant": "adjudicator",
+      "from": 520,
+      "to": 680,
+      "type": "backend"
+    },
+    {
+      "participant": "coach",
+      "from": 668,
+      "to": 750,
+      "type": "backend"
+    },
+    {
+      "participant": "escalator",
+      "from": 900,
+      "to": 980,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "The beat that matters",
+      "items": [
+        "\"A couple of wobbles\" is a mention, not an answer",
+        "M14 becomes partial — quote attached, item still open",
+        "Every competitor ticks here; this is the whole product"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Why routing comes first",
+      "items": [
+        "Without it, all 15 open items were judged against every chunk",
+        "A remark about falls was landing under continence and low mood",
+        "Routing cut items touched from 7 to 2, and cost with it"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "The gate is a router, not a wall",
+      "items": [
+        "409 carries what is missing and whether a decline is permitted",
+        "Ask now, record a decline, or let the agent escalate",
+        "The escalation is drafted and filed autonomously"
+      ]
+    }
+  ]
+}

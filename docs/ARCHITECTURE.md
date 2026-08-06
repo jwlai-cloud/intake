@@ -9,6 +9,23 @@ Firestore database, in project `agent-era`.
 
     https://intake-agent-320877670799.us-central1.run.app
 
+## Diagrams
+
+Interactive, self-contained HTML — pan, zoom, search, click a node to trace its
+relationships, and step the guided views.
+
+| Diagram | Shows | Source spec |
+|---|---|---|
+| [`diagrams/intake-architecture.html`](diagrams/intake-architecture.html) | Components, boundaries, where each model call happens | `diagrams/intake.architecture.json` |
+| [`diagrams/intake-sequence.html`](diagrams/intake-sequence.html) | One 18-second chunk end to end, then the gate refusing a report | `diagrams/intake.sequence.json` |
+
+Regenerate after a change rather than hand-editing the HTML:
+
+```bash
+node ~/.claude/skills/archify/bin/archify.mjs deliver architecture \
+  docs/diagrams/intake.architecture.json docs/diagrams/intake-architecture.html --quality showcase
+```
+
 ## Components
 
 | Component | Tech | Responsibility | State |
