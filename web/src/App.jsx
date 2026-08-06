@@ -112,11 +112,22 @@ export default function App() {
     setGate((g) => g?.filter((o) => o.item_id !== body.item_id) ?? null)
   }
 
+  const newSession = () => {
+    recorder.current?.stop()
+    recorder.current = null
+    setRecording(false)
+    setElapsed(0)
+    setQueued(0)
+    setGate(null)
+    setError('')
+    setSession(null)
+  }
+
   if (!session) {
     return <Landing templates={templates} onBegin={begin} error={error} />
   }
   if (session.report) {
-    return <Report session={session} />
+    return <Report session={session} onNewSession={newSession} />
   }
 
   return (
@@ -470,7 +481,7 @@ function GateItem({ outstanding, onResolve, onClose }) {
   )
 }
 
-function Report({ session }) {
+function Report({ session, onNewSession }) {
   const report = session.report
   return (
     <>
@@ -490,6 +501,10 @@ function Report({ session }) {
               </div>
             </div>
             <div className="report-actions">
+              {/* Swapping template in-app rather than by reloading: the same
+                  engine runs a completely different form, and that swap is the
+                  visible form of ADR-0003. */}
+              <button className="btn ghost" onClick={onNewSession}>New session</button>
               <button className="btn ghost" onClick={() => window.print()}>Export PDF</button>
               <button className="btn">Finalise report</button>
             </div>
