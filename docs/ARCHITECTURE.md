@@ -18,6 +18,12 @@ relationships, and step the guided views.
 |---|---|---|
 | [`diagrams/intake-architecture.html`](diagrams/intake-architecture.html) | Components, boundaries, where each model call happens | `diagrams/intake.architecture.json` |
 | [`diagrams/intake-sequence.html`](diagrams/intake-sequence.html) | One 18-second chunk end to end, then the gate refusing a report | `diagrams/intake.sequence.json` |
+| [`diagrams/intake-orchestration.html`](diagrams/intake-orchestration.html) | Inside the turn: which stages are ADK LlmAgents, which are ours, where each Vertex call happens | `diagrams/intake.orchestration.json` |
+
+The workflow renderer has a fixed 80px column pitch and a 92px minimum node
+width, so connected nodes must sit **two columns apart** or they overlap. That
+caps a lane's main path at three boxes, which is why routing and adjudication
+share one — the split is in its sublabel and the cards.
 
 Regenerate after a change rather than hand-editing the HTML:
 
