@@ -104,20 +104,21 @@ echo 'FIRESTORE_DATABASE=intake' >> .env
 ```
 
 You can also skip Firestore entirely — set `INTAKE_STORE=memory` and everything
-runs, minus durability. `GET /healthz` always tells you which store is live.
+runs, minus durability. `GET /health` always tells you which store is live.
 
 ### 2. Verify the adjudicator before anything else
 
 The adjudicator is the product, so it is the first thing to run:
 
 ```bash
-uv run --group dev pytest backend/tests -q   # 45 tests, no network
-cd eval && uv run python run_eval.py         # 35 labelled cases, real Vertex calls
+uv run --group dev pytest backend/tests -q   # 51 tests, no network
+cd eval && uv run python run_eval.py         # 47 labelled cases, real Vertex calls
 ```
 
 `run_eval.py` prints a confusion matrix and **exits non-zero if any answer
-labelled insufficient was marked sufficient**. Current score: **35/35, precision
-on `sufficient` 100%**. Do not move on to the UI until this passes.
+labelled insufficient was marked sufficient**. Current score: **46/47, precision
+on `sufficient` 100%** over 47 cases, with one deliberate non-critical miss.
+Do not move on to the UI until this passes.
 
 ### 3. Run it locally
 

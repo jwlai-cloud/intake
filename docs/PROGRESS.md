@@ -5,6 +5,87 @@ entry at the top.
 
 ---
 
+## 2026-08-06 — deployed on Cloud Run, on the personal project
+
+**Live:** https://intake-agent-320877670799.us-central1.run.app
+**Eval: 46/47, precision on `sufficient` 100%.** 51 backend tests.
+Project **agent-era** (personal), Firestore native database `intake`,
+region us-central1.
+
+**The account mix-up, and what it cost**
+
+The `gcloud` configuration named `personal` was pointing at account
+`junwei.lai@trafficguard.ai` and project `tgds-dev` — the work project. Read at
+face value at session start, so every Vertex call up to this point billed there.
+Nothing was *created* on the work project: Cloud Run, Secret Manager and
+Artifact Registry were listed and contain no `intake` resource, and the single
+Firestore write attempt was rejected outright because that project's default
+database is Datastore mode. Now on `agent-era` throughout.
+
+Second trap, which cost longer: `GOOGLE_APPLICATION_CREDENTIALS` is exported in
+the shell profile pointing at a TrafficGuard service-account key. It silently
+overrides `gcloud auth application-default login`, so the first attempt against
+`agent-era` authenticated as that service account and returned 403. Any terminal
+running Intake must unset it. Now documented in README and `.env.example`.
+
+**Done**
+
+- **Router** (`router.py`) — fixes the evidence bleed that headed the last
+  known-issues list. One small call decides which open items a chunk bears on;
+  only those are adjudicated. Items touched by "a couple of wobbles" went
+  7 → 5 → **2**. Recall-biased and fails open, because an unrouted item is an
+  unasked question.
+- **12 adversarial eval cases** (47 total) and they found a real bug on the
+  first run: a retracted answer ("I'm thinking of my sister") was read as a
+  clean nil return and the item ticked. Fixed with rule 8 — the later turn
+  governs only when it is itself a clear answer or refusal; a hedged retraction
+  settles nothing and a contradiction is the practitioner's to resolve.
+- **Firestore native database created and verified.** Session documents written,
+  chunk sequences recorded, slot states persisted. The probe was also fixed: it
+  used a document id of `__probe__`, which Firestore reserves, so it failed on a
+  perfectly healthy database.
+- **Deployed to Cloud Run** and verified end to end against the live URL: 401
+  without the key, M14 partial after chunk one, answered after chunk two, M15
+  opening conditionally, the gate returning 409, and the agent drafting a
+  follow-up routed to the Occupational therapy queue.
+- **Harness hole fixed.** With every case erroring it printed "precision 100%"
+  over a table of zeroes, because precision on an empty denominator was
+  hardcoded to 1.0. A totally broken run read as a perfect one.
+- `/healthz` renamed to `/health` — Cloud Run's frontend reserves that path and
+  answers it itself, so the request never reached the container.
+- `requirements.txt` is now generated from the resolved environment. Hand-pinned
+  `fastapi==0.121.2` conflicted with ADK 2.6.2's `fastapi>=0.133` and the first
+  image build failed, even though the tested venv was correct.
+
+**Known issues**
+
+1. **The API key ships in the browser bundle.** `--allow-unauthenticated` plus
+   an `X-Intake-Key` header is the only workable gate for a browser client with
+   no user accounts, but the key is readable by anyone who opens the JS. It
+   stops drive-by traffic and nothing more. A hard project spend cap and taking
+   the service down between demos are what actually carry the risk.
+2. **No spend cap set yet.** Do this before leaving the service up.
+3. One eval miss remains, `M12-adversarial-indirect-quantity` — weight loss
+   evidenced by a wedding ring resized twice, where the adjudicator wants
+   unintentionality stated outright. False-insufficient, the safe direction, and
+   kept deliberately: a suite where everything passes cannot show it is able to
+   fail.
+4. The web client has not been driven against the deployed URL in a browser —
+   only curl. Build it with `VITE_API_BASE`/`VITE_API_KEY` and click through.
+5. Practitioner memory still unwritten; no Firestore realtime listener yet.
+
+**Next, in priority order**
+
+1. Set a billing budget/alert on agent-era, then leave the service up or take it
+   down.
+2. Point the web client at the deployed URL and click through the whole flow in
+   a browser, including microphone capture.
+3. Capture the Cloud Run dashboard and Vertex AI logs for the demo video.
+4. Demo script; pre-test the vague phrasings until stable on camera.
+5. Realtime listener; practitioner memory.
+
+---
+
 ## 2026-08-05 (late) — all components built, end to end on live Vertex AI
 
 **Eval: 35/35. Precision on `sufficient` 100%, recall 100%. Backend suite: 45

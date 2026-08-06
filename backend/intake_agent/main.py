@@ -91,8 +91,10 @@ class HighlightUpdate(BaseModel):
 # --- routes ------------------------------------------------------------------
 
 
-@app.get("/healthz")
-def healthz() -> dict:
+@app.get("/health")
+def health() -> dict:
+    """Not /healthz — Cloud Run's frontend reserves that path and answers it
+    itself, so the request never reaches the container."""
     return {"ok": True, "store": type(_store).__name__}
 
 

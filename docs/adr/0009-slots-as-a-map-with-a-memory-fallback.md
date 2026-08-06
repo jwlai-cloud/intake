@@ -37,7 +37,7 @@ messier client.
 
 The fallback means a demo survives an unreachable or wrong-mode database, at the
 cost of state that does not outlive a restart. The warning is loud and
-`/healthz` reports which store is live, so "it silently wasn't using Firestore"
+`/health` reports which store is live, so "it silently wasn't using Firestore"
 is not a failure mode we can walk into unknowingly — which matters when a
 contest requires demonstrating genuine Google Cloud usage.
 

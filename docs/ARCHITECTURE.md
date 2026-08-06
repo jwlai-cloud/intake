@@ -4,8 +4,10 @@
 stale content, do not append history. Decisions and their reasoning live in
 `docs/adr/`.
 
-Status: **implemented end to end and verified against live Vertex AI.** Not yet
-deployed to Cloud Run.
+Status: **deployed and verified end to end on Cloud Run**, backed by a native
+Firestore database, in project `agent-era`.
+
+    https://intake-agent-320877670799.us-central1.run.app
 
 ## Components
 
@@ -13,8 +15,9 @@ deployed to Cloud Run.
 |---|---|---|---|
 | Web client | React 18 + Vite | Mic capture, 18s chunking, local chunk queue, live coverage UI, three-state gate, report edit | Built |
 | Agent service | FastAPI + ADK Python 2.6.2 | HTTP surface, turn orchestration, gate, report assembly | Built |
-| Turn pipeline | ADK `SequentialAgent` | transcribe → adjudicate → coach | Built |
-| Adjudicator | `gemini-3.6-flash` via Vertex AI, schema-constrained | Answer-level judgement, one call per item | Built, 35/35 on eval |
+| Turn pipeline | ADK `SequentialAgent` | transcribe → route → adjudicate → coach | Built |
+| Router | `gemini-3.6-flash`, schema-constrained | Which open items does this chunk bear on? | Built |
+| Adjudicator | `gemini-3.6-flash` via Vertex AI, schema-constrained | Answer-level judgement, one call per item | Built, 46/47 on eval |
 | Session store | Firestore, with in-memory fallback | Durable slot state, follow-ups, highlights | Built |
 | Templates | JSON config | The entire vertical | Two shipped |
 
@@ -32,7 +35,8 @@ browser mic
                   ├─ 1. transcriber   LlmAgent, audio in → speaker-attributed turns
                   ├─ 2. adjudication  custom BaseAgent
                   │       ├─ load open required items from Firestore
-                  │       ├─ fan out: one adjudicate() call per open item, concurrently
+                  │       ├─ route(): one call — which items is this chunk about?
+                  │       ├─ fan out: one adjudicate() call per routed item, concurrently
                   │       ├─ discard verdicts marked not-addressed
                   │       ├─ fold verdicts into slot state, atomically
                   │       └─ recompute depends_on → the required set changes mid-interview
@@ -91,8 +95,10 @@ and dodged* and *never came up* — and without it the UI quotes a remark about
 falls underneath the continence item.
 
 Correctness is measured, not assumed. See `eval/`. The bar: never mark an
-answer sufficient that a labelled case marks insufficient. Current: **35/35,
-precision on `sufficient` 100%**.
+answer sufficient that a labelled case marks insufficient. Current: **46/47 over
+47 cases, precision on `sufficient` 100%**. Twelve of those cases are
+adversarial, and one of them found a real defect the first time it ran: a
+retracted answer being read as a clean nil return.
 
 ## Data model
 

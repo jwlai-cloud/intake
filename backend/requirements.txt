@@ -1,7 +1,10 @@
-# Pinned deliberately: ADK 2.x had breaking changes in the week before this
-# project started, and 2.6.2 requires google-genai>=2.9.
+# Generated from the resolved local environment, not written by hand.
+#   uv pip freeze | grep -iE '^(google-adk|google-genai|google-cloud-firestore|fastapi|uvicorn)=='
+# Hand-pinning these drifted once already: fastapi was pinned to 0.121.2 while
+# google-adk 2.6.2 requires >=0.133, so the image failed to build even though
+# the tested venv was fine. Regenerate rather than edit.
 google-adk==2.6.2
 google-genai==2.16.0
-google-cloud-firestore==2.21.0
-fastapi==0.121.2
-uvicorn[standard]==0.38.0
+google-cloud-firestore==2.28.0
+fastapi==0.141.1
+uvicorn[standard]==0.52.1
