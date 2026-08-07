@@ -25,6 +25,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 import uuid
 from typing import Any, AsyncGenerator
 
@@ -179,6 +180,19 @@ class AdjudicationAgent(BaseAgent):
         relevant_ids: list[str] = []
         updated: list[str] = []
 
+        # Deliberately explicit. These lines are the audit trail for what the
+        # agent did, and they are also what proves — in Cloud Logging, from the
+        # deployed service — that this is an ADK pipeline calling Gemini on
+        # Vertex AI, rather than a claim in a README.
+        #
+        # Item ids, verdicts and timings only. Never transcript text: a Vertex
+        # error once echoed interviewee speech into these logs, and Cloud
+        # Logging outlives the session document (ADR-0007).
+        turn_t0 = time.monotonic()
+        log.info("ADK turn · session %s · stage=adjudication · %d open items · "
+                 "model=%s via Vertex AI",
+                 session_id[:8], len(open_items), self.model)
+
         if turns and open_items:
             session = self.store.append_turns(session_id, turns)
             heard = session.recent_turns
@@ -186,16 +200,24 @@ class AdjudicationAgent(BaseAgent):
             # Route before adjudicating: one small call decides which items this
             # chunk is even about, so a remark about falls is not judged against
             # continence and cannot leave its quote there.
+            route_t0 = time.monotonic()
             relevant = await asyncio.to_thread(
                 route, open_items, turns, model=self.model)
             relevant_ids = [i.id for i in relevant]
-            log.info("chunk routed to %d of %d open items: %s",
+            log.info("  route      · 1 Gemini call (%s) · %.1fs · "
+                     "%d of %d items in play: %s",
+                     self.model, time.monotonic() - route_t0,
                      len(relevant), len(open_items), relevant_ids)
 
+            adj_t0 = time.monotonic()
             verdicts = await asyncio.gather(*[
                 asyncio.to_thread(adjudicate, item, heard, model=self.model)
                 for item in relevant
             ], return_exceptions=True)
+            log.info("  adjudicate · %d Gemini call%s (%s)%s · %.1fs",
+                     len(relevant), "" if len(relevant) == 1 else "s", self.model,
+                     " in parallel" if len(relevant) > 1 else "",
+                     time.monotonic() - adj_t0)
 
             for item, verdict in zip(relevant, verdicts):
                 if isinstance(verdict, Exception):
@@ -211,7 +233,10 @@ class AdjudicationAgent(BaseAgent):
                     value=verdict.evidence, evidence=verdict.evidence,
                     missing=list(verdict.missing), reason=verdict.reason,
                 )
-                updated.append(f"{item.id}={after.slots[item.id]['state']}")
+                state_now = after.slots[item.id]["state"]
+                updated.append(f"{item.id}={state_now}")
+                log.info("             %s · %s → %s", item.id,
+                         verdict.verdict, state_now)
 
         session = self.store.get(session_id)
         brief = build_coach_brief(session, turns)
@@ -227,6 +252,10 @@ class AdjudicationAgent(BaseAgent):
             f"Coverage {resolved}/{required}."
             + (f" Updated: {', '.join(updated)}." if updated else " No item changed state.")
         )
+
+        log.info("ADK turn · session %s · done in %.1fs · coverage %d/%d · %s",
+                 session_id[:8], time.monotonic() - turn_t0, resolved, required,
+                 ", ".join(updated) or "no item changed state")
 
         yield Event(
             author=self.name,

@@ -21,16 +21,39 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from . import report as report_builder
-from .agent import Escalator, TurnRunner
-from .store import BaseStore, FirestoreStore, MemoryStore, default_store
-from .template import Template, TemplateError
+from . import tracing
 
+# BEFORE importing .agent, which imports ADK. OpenTelemetry resolves a tracer at
+# the moment get_tracer is called, and google.adk.telemetry does that at import
+# time — so a provider installed afterwards is silently ignored and every span
+# goes to the no-op default. Ordering is the whole fix.
+_tracing = tracing.setup()
+
+from . import report as report_builder  # noqa: E402
+from .agent import Escalator, TurnRunner  # noqa: E402
+from .store import BaseStore, FirestoreStore, MemoryStore, default_store  # noqa: E402
+from .template import Template, TemplateError  # noqa: E402
+
+# uvicorn configures its own loggers, so ours default to WARNING and every
+# log.info in the package is silently dropped — which is why the pipeline's
+# audit lines never reached Cloud Logging.
+logging.basicConfig(
+    level=os.environ.get("INTAKE_LOG_LEVEL", "INFO"),
+    format="%(levelname)s %(name)s | %(message)s",
+)
 log = logging.getLogger(__name__)
 
 # 20-second Opus chunks are well under a megabyte; anything much larger is a
 # mistake or an attack, and decoding it first would be the expensive part.
 MAX_AUDIO_BYTES = 8 * 1024 * 1024
+
+def _adk_version() -> str:
+    try:
+        import importlib.metadata as md
+        return md.version("google-adk")
+    except Exception:
+        return "unknown"
+
 
 app = FastAPI(title="Intake", version="0.1.0")
 
@@ -41,6 +64,12 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+log.info("Intake starting · ADK %s · model %s via Vertex AI · project %s · "
+         "Firestore %s · tracing=%s",
+         _adk_version(), os.environ.get("GEMINI_MODEL", "gemini-3.6-flash"),
+         os.environ.get("GOOGLE_CLOUD_PROJECT", "(unset)"),
+         os.environ.get("FIRESTORE_DATABASE", "(default)"), _tracing)
 
 _store: BaseStore = default_store()
 _runner = TurnRunner(_store)
@@ -155,7 +184,8 @@ class HighlightUpdate(BaseModel):
 def health() -> dict:
     """Not /healthz — Cloud Run's frontend reserves that path and answers it
     itself, so the request never reaches the container."""
-    return {"ok": True, "store": type(_store).__name__}
+    return {"ok": True, "store": type(_store).__name__,
+            "tracing_configured": _tracing}
 
 
 @app.get("/templates")

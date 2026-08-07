@@ -9,6 +9,7 @@ dependencies = [
     "google-cloud-firestore>=2.19",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
+    "opentelemetry-exporter-gcp-trace>=1.14.0",
 ]
 
 [tool.uv]
