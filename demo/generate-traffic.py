@@ -14,7 +14,7 @@ Vertex, and it prints a countdown so you know exactly when to start recording.
     uv run python demo/generate-traffic.py --rounds 6  # longer
 
 Have this open first, streaming, zoomed to 150%:
-  https://console.cloud.google.com/run/detail/us-central1/intake-agent/logs?project=agent-era
+  https://console.cloud.google.com/run/detail/us-central1/intake-agent/observability/logs?project=agent-era
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ def main() -> None:
 
     print("\nOpen this, click 'Stream logs', zoom to 150%, start recording:")
     print("  https://console.cloud.google.com/run/detail/us-central1/"
-          "intake-agent/logs?project=agent-era\n")
+          "intake-agent/observability/logs?project=agent-era\n")
     for n in range(a.countdown, 0, -1):
         print(f"  starting in {n}… ", end="\r", flush=True)
         time.sleep(1)

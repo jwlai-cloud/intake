@@ -74,7 +74,7 @@ legible before you send them — that is the only thing that can spoil this.
 
 ### Shot 2 · Cloud Run logs
 
-<https://console.cloud.google.com/run/detail/us-central1/intake-agent/logs?project=agent-era>
+<https://console.cloud.google.com/run/detail/us-central1/intake-agent/observability/logs?project=agent-era>
 
 - The most valuable frame in the whole segment.
 - If you can, filter to `chunk routed` — those lines are the ADK pipeline
