@@ -15,9 +15,30 @@ const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
  */
 const KEY_STORAGE = 'intake.accessCode'
 
-export const getAccessCode = () => sessionStorage.getItem(KEY_STORAGE) || ''
-export const setAccessCode = (code) => sessionStorage.setItem(KEY_STORAGE, code.trim())
-export const clearAccessCode = () => sessionStorage.removeItem(KEY_STORAGE)
+// localStorage, not sessionStorage: sessionStorage is per-tab and dies with the
+// tab, so the code had to be retyped after every reload and in every new tab.
+// It is a shared demo secret on a machine the practitioner controls, not a
+// per-user credential — the thing it protects is the Vertex bill, and typing it
+// six times a day protects nothing extra.
+//
+// `?key=…` also works, so a bookmark can carry it. The parameter is stripped
+// from the address bar immediately so it does not sit in screenshots or in
+// browser history.
+function codeFromUrl() {
+  const url = new URL(window.location.href)
+  const key = url.searchParams.get('key')
+  if (!key) return null
+  url.searchParams.delete('key')
+  window.history.replaceState({}, '', url)
+  return key.trim()
+}
+
+const fromUrl = codeFromUrl()
+if (fromUrl) localStorage.setItem(KEY_STORAGE, fromUrl)
+
+export const getAccessCode = () => localStorage.getItem(KEY_STORAGE) || ''
+export const setAccessCode = (code) => localStorage.setItem(KEY_STORAGE, code.trim())
+export const clearAccessCode = () => localStorage.removeItem(KEY_STORAGE)
 
 async function call(path, { method = 'GET', body } = {}) {
   const key = getAccessCode()

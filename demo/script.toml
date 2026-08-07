@@ -1,0 +1,136 @@
+# The demo script. Edit this, not produce.py.
+#
+# Three voices: narrator, nurse, interviewee. Change any wording here and the
+# next production run re-synthesises only what changed — clips are cached by
+# content, so an unedited line costs nothing.
+#
+# Two rules the producer enforces for you:
+#
+#   * The whole thing must come in under 4:00. If it does not, the run stops
+#     and tells you by how much, before spending anything.
+#   * No two lines may overlap. Durations are measured from the real audio, not
+#     estimated, so you cannot accidentally write two people talking at once.
+#
+# WRITING THE INTERVIEW
+#
+# Each [[turns]] is one exchange: the practitioner asks, the person answers,
+# and the agent then has about twenty seconds of real work to do. Two narrator
+# lines cover that wait — `working` starts as the chunk goes, `why` lands in
+# the middle of it.
+#
+# The three turns below are chosen so all three resolution states happen on
+# camera: an answer that is *not* good enough, the same item answered properly,
+# and a refusal. Keep that shape if you change the content — it is the whole
+# argument of the video.
+#
+# `expect` is the template item the turn is about, and `verdict` is what the
+# narrator says once the screen changes. If you write a turn whose answer does
+# not actually satisfy the item's guidance note, the agent will not tick it —
+# which is the point, but it does mean a new turn is worth testing first:
+#
+#     cd eval && uv run python run_eval.py --item M14
+
+[[opening]]
+narrator = """
+A community nurse has ninety minutes and a form she is legally required to
+complete. She asks about falls, and the answer is: oh, I've had a couple of
+wobbles. Every AI scribe ticks that item. It was mentioned. It was never
+answered.
+"""
+
+[[architecture]]
+narrator = """
+Every chunk runs one turn of a Google A-D-K pipeline on Cloud Run, and state
+lives in Firestore as one slot per required item — never the transcript. A
+three-hour interview costs the same per chunk as a ten-minute one.
+"""
+
+# --- the interview ----------------------------------------------------------
+
+[[turns]]
+id = "falls-vague"
+expect = "M14"
+nurse = "Have you had any falls in the last year?"
+them = "Oh. I've had a couple of wobbles."
+caption = "Falls · a vague answer"
+working = """
+That chunk is on Cloud Run now. Transcribe, route, then one Gemini call per
+open item — fourteen items, narrowed to the two this chunk is about.
+"""
+why = "This is the moment the whole product exists for."
+verdict = "Mentioned, not answered. It lists what is still missing."
+
+[[turns]]
+id = "falls-specific"
+expect = "M14"
+nurse = "How many times, and what happened the last one?"
+them = """
+Three times since Christmas. The last one was in May. I slipped coming down
+the stairs.
+"""
+caption = "Asking the question the agent suggested"
+working = """
+The guidance asks for two things: a number, and the circumstances of the most
+recent fall. It checks against that note, not its own idea of a good answer.
+"""
+why = "A count, and the circumstances. Both of them, this time."
+verdict = "Now it counts. And a new required item has just appeared."
+
+[[turns]]
+id = "alcohol-declined"
+expect = "M24"
+nurse = "And can I ask how much you drink in a week?"
+them = "That's my own business, thank you. Put down that I'd rather not say."
+caption = "A refusal"
+working = """
+The form marks which items may be declined. Alcohol intake is one. Falls is
+not.
+"""
+why = "The form permits a decline here. It does not on falls."
+verdict = "Declined is a real resolution, not a blank."
+
+# --- over the live Cloud Run logs -------------------------------------------
+
+[[console]]
+narrator = """
+This is that request arriving, in Cloud Run, in this project — A-D-K's own
+logging naming the model and the Vertex AI backend.
+"""
+
+[[console]]
+narrator = """
+One routing call, then three Gemini calls in parallel, one per open item. Two
+came back insufficient, so those items stay open.
+"""
+
+# --- the gate ---------------------------------------------------------------
+
+[[gate]]
+narrator = "She asks for the report. It refuses."
+
+[[gate]]
+narrator = """
+The agent drafts each follow-up itself, and routes it to the occupational
+therapy queue. Nothing is ever left silently blank.
+"""
+
+[[gate]]
+narrator = """
+The report is assembled from what was recorded. There is no model call in it
+at all.
+"""
+
+# --- close ------------------------------------------------------------------
+
+[[closing]]
+narrator = """
+Forty-seven labelled cases, scored against the live service. One hundred
+percent precision on sufficient — it has never once ticked an answer a human
+labelled insufficient.
+"""
+
+[[closing]]
+narrator = "Same engine, a different profession, no code changed. The vertical is a JSON template."
+
+[[closing]]
+narrator = "Every competitor ticks on mention. Intake ticks on answered."

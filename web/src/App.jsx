@@ -224,6 +224,19 @@ function Landing({ templates, onBegin, error }) {
 function AccessCodeField() {
   const [code, setCode] = useState(getAccessCode())
   const [saved, setSaved] = useState(Boolean(getAccessCode()))
+  const [editing, setEditing] = useState(!getAccessCode())
+
+  // Saved codes stay saved. Showing the form on every visit made it look like
+  // a login, which it is not.
+  if (!editing) {
+    return (
+      <p className="why" style={{ maxWidth: 440, margin: '0 auto 20px' }}>
+        Access code saved on this device.{' '}
+        <button className="mini" style={{ marginLeft: 8 }}
+                onClick={() => setEditing(true)}>Change</button>
+      </p>
+    )
+  }
 
   return (
     <div style={{ maxWidth: 440, margin: '0 auto 22px' }}>
@@ -243,7 +256,11 @@ function AccessCodeField() {
                    padding: '9px 11px' }}
         />
         <button className="mini confirm"
-                onClick={() => { setAccessCode(code); setSaved(Boolean(code.trim())) }}>
+                onClick={() => {
+                  setAccessCode(code)
+                  setSaved(Boolean(code.trim()))
+                  if (code.trim()) setEditing(false)
+                }}>
           {saved ? 'Saved' : 'Save'}
         </button>
       </div>

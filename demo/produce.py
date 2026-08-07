@@ -59,74 +59,45 @@ DIAGRAMS = ROOT.parent / "docs" / "diagrams"
 FINAL = OUT / "intake-demo.mp4"
 CONSOLE = ROOT / "console-proof.mp4"   # 15s of live Cloud Run logs, streaming
 
-TURNS = [
-    {
-        "id": "falls-vague",
-        "nurse": "Have you had any falls in the last year?",
-        "them": "Oh. I've had a couple of wobbles.",
-        "caption": "Falls · a vague answer",
-        "why": "This is the moment the whole product exists for.",
-        "verdict": "Mentioned, not answered. It lists what is still missing.",
-        "working": "That chunk is on Cloud Run now. Transcribe, route, then one "
-                   "Gemini call per open item — fourteen items, narrowed to the "
-                   "two this chunk is about.",
-        "expect": "M14",
-    },
-    {
-        "id": "falls-specific",
-        "nurse": "How many times, and what happened the last one?",
-        "them": "Three times since Christmas. The last one was in May. "
-                "I slipped coming down the stairs.",
-        "caption": "Asking the question the agent suggested",
-        "why": "A count, and the circumstances. Both of them, this time.",
-        "verdict": "Now it counts. And a new required item has just appeared.",
-        "working": "The guidance asks for two things: a number, and the "
-                   "circumstances of the most recent fall. It checks against "
-                   "that note, not its own idea of a good answer.",
-        "expect": "M14",
-    },
-    {
-        "id": "alcohol-declined",
-        "nurse": "And can I ask how much you drink in a week?",
-        "them": "That's my own business, thank you. Put down that I'd rather not say.",
-        "caption": "A refusal",
-        "why": "The form permits a decline here. It does not on falls.",
-        "verdict": "Declined is a real resolution, not a blank.",
-        "working": "The form marks which items may be declined. Alcohol intake "
-                   "is one. Falls is not.",
-        "expect": "M24",
-    },
-]
+SCRIPT = ROOT / "script.toml"
 
-OPENING = [
-    "A community nurse has ninety minutes and a form she is legally required to "
-    "complete. She asks about falls, and the answer is: oh, I've had a couple "
-    "of wobbles. Every AI scribe ticks that item. It was mentioned. It was "
-    "never answered.",
-]
 
-ARCHITECTURE = [
-    "Every chunk runs one turn of a Google A-D-K pipeline on Cloud Run, and "
-    "state lives in Firestore as one slot per required item — never the "
-    "transcript. A three-hour interview costs the same per chunk as a "
-    "ten-minute one.",
-]
+def load_script() -> dict:
+    """The words live in script.toml so they can be edited without touching code.
 
-CONSOLE_LINES = [
-    "This is that request arriving, in Cloud Run, in this project — A-D-K's own "
-    "logging naming the model and the Vertex AI backend.",
-    "One routing call, then three Gemini calls in parallel, one per open item. "
-    "Two came back insufficient, so those items stay open.",
-]
+    Multi-line TOML strings keep their newlines; speech does not want them, so
+    they are flattened here rather than in the file, which lets the file stay
+    readable at a sensible column width.
+    """
+    import tomllib
+    raw = tomllib.loads(SCRIPT.read_text())
 
-CLOSING = [
-    "Forty-seven labelled cases, scored against the live service. One hundred "
-    "percent precision on sufficient — it has never once ticked an answer a "
-    "human labelled insufficient.",
-    "Same engine, a different profession, no code changed. The vertical is a "
-    "JSON template.",
-    "Every competitor ticks on mention. Intake ticks on answered.",  # closing line
-]
+    def flat(text: str) -> str:
+        return " ".join(text.split())
+
+    script = {
+        "opening": [flat(b["narrator"]) for b in raw.get("opening", [])],
+        "architecture": [flat(b["narrator"]) for b in raw.get("architecture", [])],
+        "console": [flat(b["narrator"]) for b in raw.get("console", [])],
+        "gate": [flat(b["narrator"]) for b in raw.get("gate", [])],
+        "closing": [flat(b["narrator"]) for b in raw.get("closing", [])],
+        "turns": [],
+    }
+    for t in raw.get("turns", []):
+        script["turns"].append({k: (flat(v) if isinstance(v, str) else v)
+                                for k, v in t.items()})
+    if not script["turns"]:
+        raise SystemExit(f"{SCRIPT} has no [[turns]]")
+    return script
+
+
+SCRIPT_DATA = load_script()
+TURNS = SCRIPT_DATA["turns"]
+OPENING = SCRIPT_DATA["opening"]
+ARCHITECTURE = SCRIPT_DATA["architecture"]
+CONSOLE_LINES = SCRIPT_DATA["console"]
+GATE_LINES = SCRIPT_DATA["gate"]
+CLOSING = SCRIPT_DATA["closing"]
 
 
 def api(method: str, path: str, body: dict | None = None, tries: int = 4) -> dict:
@@ -281,12 +252,8 @@ async def main() -> None:
     marks["console_end"] = max(tl.end + 0.6, marks["console"] + 20.5)
 
     marks["gate"] = tl.end + 0.8
-    tl.append("narrator", "She asks for the report. It refuses.", gap=0.6)
-    tl.append("narrator", "The agent drafts each follow-up itself, and routes it "
-                          "to the occupational therapy queue. Nothing is ever "
-                          "left silently blank.", gap=2.5)
-    tl.append("narrator", "The report is assembled from what was recorded. "
-                          "There is no model call in it at all.", gap=1.4)
+    for n, line in enumerate(GATE_LINES):
+        tl.append("narrator", line, gap=(0.6 if n == 0 else 2.5))
     marks["close"] = tl.end + 0.8
     for line in CLOSING:
         tl.append("narrator", line, gap=0.7)
