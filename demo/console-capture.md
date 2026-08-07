@@ -4,13 +4,19 @@ The rubric asks: *"Is there **visual proof of Google Cloud deployment** in the
 video?"* and counts *"terminal logs, **database updates**, or UI changes"* as
 proof of action.
 
-I cannot log into your console, so this is the one segment you record. Aim for
-**35–45 seconds of raw footage**; I will cut it to the ~20 seconds that fit.
+I cannot log into your console, so this is the one segment you capture.
 
-Hand me the file and I will splice it in:
+**Screenshots are enough — you do not need to screen-record.** Four stills, held
+about five seconds each with a slow push-in and narration over the top, is
+twenty seconds of proof and reads as deliberate rather than static. A screen
+recording works too if you prefer; both go through the same tool.
 
 ```bash
-uv run python demo/splice.py path/to/your-console-recording.mov
+# screenshots — the easy path
+uv run python demo/splice.py ~/Desktop/run.png ~/Desktop/logs.png ~/Desktop/vertex.png
+
+# or a recording
+uv run python demo/splice.py ~/Desktop/console.mov --keep 20
 ```
 
 It goes in at **2:05**, immediately after the second falls verdict — the moment
@@ -31,23 +37,23 @@ answering a question the viewer already has.
 
 ## The three shots
 
-Do them in one continuous take if you can; it is easier to trim than to join.
+One screenshot each. Take them at full-screen browser, and check the text is
+legible before you send them — that is the only thing that can spoil this.
 
-### Shot 1 · Cloud Run service — about 12s
+### Shot 1 · Cloud Run service
 
 <https://console.cloud.google.com/run/detail/us-central1/intake-agent/metrics?project=agent-era>
 
-- Let the **service name, region, and URL** be readable for 3 seconds.
+- The **service name, region, and URL** must be legible in the frame.
 - Show the **green tick** and "Serving 100% of traffic".
 - Scroll gently to the **request-count chart** so the traffic spike from the
   demo run is visible.
 
-### Shot 2 · Cloud Run logs — about 15s
+### Shot 2 · Cloud Run logs
 
 <https://console.cloud.google.com/run/detail/us-central1/intake-agent/logs?project=agent-era>
 
-- The most valuable frames in the whole segment. Let real log lines sit still
-  and readable.
+- The most valuable frame in the whole segment.
 - If you can, filter to `chunk routed` — those lines are the ADK pipeline
   reporting which items each chunk was routed to, which is the architecture
   claim proving itself in production:
@@ -58,7 +64,7 @@ Do them in one continuous take if you can; it is easier to trim than to join.
 
 - Do **not** filter to errors. Do not go hunting for the spend-cap 403s.
 
-### Shot 3 · Vertex AI — about 12s
+### Shot 3 · Vertex AI
 
 Either of these; the dashboard is the stronger shot if it has data:
 
@@ -69,7 +75,7 @@ Either of these; the dashboard is the stronger shot if it has data:
   is what a judge wants: calls actually happening, in this project, recently.
 - If a model name is visible, hold on it.
 
-### Optional shot 4 · Firestore — about 8s
+### Optional shot 4 · Firestore
 
 <https://console.cloud.google.com/firestore/databases/intake/data/panel/sessions?project=agent-era>
 
@@ -88,7 +94,10 @@ Either of these; the dashboard is the stronger shot if it has data:
 
 ## Format
 
-Anything QuickTime or OBS produces is fine — `.mov` or `.mp4`, any frame rate.
-`splice.py` normalises resolution and frame rate to match the cut. If the
-recording has system audio on it, that is fine too; it gets muted, since the
-narration plays over the top.
+`.png` from `⌘⇧4` then space (window capture) is ideal — it keeps the window
+chrome, which makes it obviously a real console rather than a crop. `.jpg` is
+fine. For a recording, anything QuickTime or OBS produces works.
+
+`splice.py` handles the rest: it scales to match the cut, letterboxes rather
+than stretching, mutes any audio, and labels each frame "Deployed on Google
+Cloud · project agent-era".
