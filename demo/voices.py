@@ -54,10 +54,18 @@ STYLE = {
 # pace, which read as slow and burned time that content needed. The prompt above
 # helps; this guarantees it. Applied at synthesis so measured durations, and
 # therefore every placement on the timeline, stay correct.
-# The brisker prompt alone took the narrator from 70 wpm to about 200, which
-# is too fast to follow. These pull it back to a natural reading pace; measured,
-# not guessed — see the wpm figure printed by this module's self-check.
-TEMPO = {"narrator": 0.94, "nurse": 1.0, "interviewee": 0.95}
+# Pace, applied at synthesis so measured durations stay correct. Measured on one
+# narrator line: 1.10 gives 170 wpm, 1.25 gives 202, 1.40 gives 283 — far too
+# fast to follow. 1.22 lands near 195, which is brisk documentary pace and still
+# clear. The interviewee is not sped up: she is an elderly woman being
+# interviewed at home, and hurrying her would undercut the scene.
+#
+# TTS length varies a little between generations, so re-measure rather than
+# trust a number: `uv run python demo/voices.py` prints the wpm it actually got.
+#
+# Check the number rather than trusting it: `uv run python demo/voices.py`
+# prints the measured wpm.
+TEMPO = {"narrator": 1.22, "nurse": 1.10, "interviewee": 1.0}
 
 _client: genai.Client | None = None
 
@@ -85,18 +93,37 @@ def synth(role: str, text: str) -> pathlib.Path:
     if path.exists():
         return path
 
-    resp = client().models.generate_content(
-        model=MODEL,
-        contents=f"{STYLE[role]} {text}",
-        config=types.GenerateContentConfig(
-            response_modalities=["AUDIO"],
-            speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)
-                )
-            ),
-        ),
-    )
+    # Vertex throttles TTS per minute per model, and re-rendering a whole script
+    # is exactly the burst that trips it. Back off rather than fail the run
+    # twenty clips in.
+    import time
+    last: Exception | None = None
+    for attempt in range(6):
+        try:
+            resp = client().models.generate_content(
+                model=MODEL,
+                contents=f"{STYLE[role]} {text}",
+                config=types.GenerateContentConfig(
+                    response_modalities=["AUDIO"],
+                    speech_config=types.SpeechConfig(
+                        voice_config=types.VoiceConfig(
+                            prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                                voice_name=voice)
+                        )
+                    ),
+                ),
+            )
+            break
+        except Exception as exc:
+            last = exc
+            if "RESOURCE_EXHAUSTED" not in str(exc) and "429" not in str(exc):
+                raise
+            wait = 8 * (attempt + 1)
+            print(f"    tts rate-limited, waiting {wait}s", flush=True)
+            time.sleep(wait)
+    else:
+        raise last  # type: ignore[misc]
+
     pcm = resp.candidates[0].content.parts[0].inline_data.data
     raw = path.with_suffix(".raw.wav")
     with wave.open(str(raw), "wb") as w:
