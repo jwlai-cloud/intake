@@ -252,3 +252,30 @@ def test_the_loss_adjusting_template_runs_the_same_endpoints(client):
             "item_id": item_id, "resolution": "escalated", "reason": "site visit ended",
             "destination": "Claims handler queue"})
     assert c.post(f"/sessions/{sid}/report").status_code == 200
+
+
+def test_escalation_still_files_when_the_model_is_unavailable(client, monkeypatch):
+    """A spend cap, a quota, or an outage must not hold the report hostage.
+
+    Drafting the follow-up text is the nicety. Filing it, with a destination, is
+    the promise the gate makes — so the item resolves either way, flagged
+    degraded so nobody mistakes the fallback wording for the agent's.
+    """
+    c, store = client
+    s = new_session(c)
+    sid = s["session_id"]
+
+    async def unavailable(session_id, item_id):
+        raise RuntimeError("403 Spend cap breached for project")
+
+    monkeypatch.setattr(main._escalator, "escalate", unavailable)
+
+    r = c.post(f"/sessions/{sid}/resolve",
+               json={"item_id": "M20", "resolution": "escalated"})
+    assert r.status_code == 200
+    assert r.json()["degraded"] is True
+
+    state = store.get(sid)
+    assert state.slots["M20"]["state"] == "escalated"
+    assert state.followups[0]["item_id"] == "M20"
+    assert state.followups[0]["destination"], "a follow-up with no destination is a gap"

@@ -247,7 +247,21 @@ async def resolve_item(session_id: str, body: Resolution) -> dict:
     try:
         if body.resolution == "escalated" and not body.reason:
             # No reason supplied means the agent drafts the follow-up itself.
-            state = await _escalator.escalate(session_id, body.item_id)
+            try:
+                state = await _escalator.escalate(session_id, body.item_id)
+            except Exception as exc:
+                # The drafting is a nicety; filing the follow-up is the promise.
+                # When the model is unavailable — a spend cap, a quota, an
+                # outage — the item must still be resolved and routed, or the
+                # gate holds the report hostage over a feature that failed.
+                log.error("escalation drafting failed for %s (%s)",
+                          body.item_id, type(exc).__name__)
+                state = _store.resolve(
+                    session_id, body.item_id, "escalated",
+                    reason="Not recorded during the visit. Follow-up drafted "
+                           "by hand — automatic drafting was unavailable.",
+                    destination="Unassigned follow-up queue")
+                return _view(state) | {"degraded": True}
         else:
             state = _store.resolve(session_id, body.item_id, body.resolution,
                                    reason=body.reason, destination=body.destination,

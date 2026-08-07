@@ -204,6 +204,7 @@ outstanding piece.
 | Firestore unusable | Startup probe fails → in-memory store with a loud warning | `default_store` |
 | Cloud Run instance recycles | No impact; durable state is Firestore's, not ADK's (ADR-0004) | — |
 | Oversized/invalid audio | 413 / 400 before decoding | `POST /chunks` |
+| Model unavailable — spend cap, quota, outage | Chunks return `degraded`; escalation still files the follow-up with a destination, flagged `degraded`, rather than 500ing and holding the report hostage | `POST /chunks`, `POST /resolve` |
 
 ## Deployment
 
