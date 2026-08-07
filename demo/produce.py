@@ -397,8 +397,26 @@ async def main() -> None:
         await browser.close()
 
     # Newest by mtime, not alphabetically last.
+    # The proof screenshots are easiest to take immediately after a run, when
+    # the logs on screen *are* the run that was just filmed. Print a console
+    # link already filtered to this session so it is one click, not a hunt.
+    import urllib.parse
+    q = urllib.parse.quote(
+        f'resource.type="cloud_run_revision"\n'
+        f'resource.labels.service_name="intake-agent"\n'
+        f'textPayload:"{sid}" OR textPayload:"chunk routed"')
+    print("\n   Cloud proof — screenshot these now, while the logs are this run:")
+    print(f"     logs   https://console.cloud.google.com/logs/query;query={q}"
+          f"?project=agent-era")
+    print(f"     run    https://console.cloud.google.com/run/detail/us-central1/"
+          f"intake-agent/metrics?project=agent-era")
+    print(f"     vertex https://console.cloud.google.com/apis/api/"
+          f"aiplatform.googleapis.com/metrics?project=agent-era")
+    print(f"     store  https://console.cloud.google.com/firestore/databases/"
+          f"intake/data/panel/sessions/{sid}?project=agent-era")
+
     raw = max(OUT.glob("*.webm"), key=lambda f: f.stat().st_mtime)
-    print("5. muxing")
+    print("\n5. muxing")
     subprocess.run(tl.mix_args(raw, FINAL), check=True)
     raw.unlink(missing_ok=True)
     print(f"   {FINAL}")
