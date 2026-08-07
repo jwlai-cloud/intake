@@ -57,6 +57,7 @@ API = os.environ.get("INTAKE_API_BASE",
 KEY = os.environ.get("INTAKE_KEY", "")
 DIAGRAMS = ROOT.parent / "docs" / "diagrams"
 FINAL = OUT / "intake-demo.mp4"
+CONSOLE = ROOT / "console-proof.mp4"   # 15s of live Cloud Run logs, streaming
 
 TURNS = [
     {
@@ -64,7 +65,7 @@ TURNS = [
         "nurse": "Have you had any falls in the last year?",
         "them": "Oh. I've had a couple of wobbles.",
         "caption": "Falls · a vague answer",
-        "why": "Every AI scribe on the market ticks the item here.",
+        "why": "This is the moment the whole product exists for.",
         "verdict": "Mentioned, not answered. It lists what is still missing.",
         "working": "That chunk is on Cloud Run now. Transcribe, route, then one "
                    "Gemini call per open item — fourteen items, narrowed to the "
@@ -77,7 +78,7 @@ TURNS = [
         "them": "Three times since Christmas. The last one was in May. "
                 "I slipped coming down the stairs.",
         "caption": "Asking the question the agent suggested",
-        "why": "A count, and the circumstances of the most recent one.",
+        "why": "A count, and the circumstances. Both of them, this time.",
         "verdict": "Now it counts. And a new required item has just appeared.",
         "working": "The guidance asks for two things: a number, and the "
                    "circumstances of the most recent fall. It checks against "
@@ -89,7 +90,7 @@ TURNS = [
         "nurse": "And can I ask how much you drink in a week?",
         "them": "That's my own business, thank you. Put down that I'd rather not say.",
         "caption": "A refusal",
-        "why": "The form permits a decline on this item. It does not on falls.",
+        "why": "The form permits a decline here. It does not on falls.",
         "verdict": "Declined is a real resolution, not a blank.",
         "working": "The form marks which items may be declined. Alcohol intake "
                    "is one. Falls is not.",
@@ -98,11 +99,10 @@ TURNS = [
 ]
 
 OPENING = [
-    "A community nurse has ninety minutes and a form she is legally required "
-    "to complete. She asks about falls. The answer is: oh, I've had a couple "
-    "of wobbles.",
-    "Every AI scribe ticks that item. It was mentioned. It was never answered. "
-    "Intake finds the gap while the person is still in the room.",
+    "A community nurse has ninety minutes and a form she is legally required to "
+    "complete. She asks about falls, and the answer is: oh, I've had a couple "
+    "of wobbles. Every AI scribe ticks that item. It was mentioned. It was "
+    "never answered.",
 ]
 
 ARCHITECTURE = [
@@ -112,12 +112,19 @@ ARCHITECTURE = [
     "ten-minute one.",
 ]
 
+CONSOLE_LINES = [
+    "This is that request arriving, in Cloud Run, in this project — A-D-K's own "
+    "logging naming the model and the Vertex AI backend.",
+    "One routing call, then three Gemini calls in parallel, one per open item. "
+    "Two came back insufficient, so those items stay open.",
+]
+
 CLOSING = [
     "Forty-seven labelled cases, scored against the live service. One hundred "
     "percent precision on sufficient — it has never once ticked an answer a "
     "human labelled insufficient.",
     "Same engine, a different profession, no code changed. Every competitor "
-    "ticks on mention. Intake ticks on answered.",  # closing line
+    "ticks on mention. Intake ticks on answered.",  # last line  # closing line
 ]
 
 
@@ -240,16 +247,17 @@ async def main() -> None:
     for line in OPENING:
         tl.append("narrator", line)
     marks["arch"] = tl.end + 0.5
-    for line in ARCHITECTURE:
-        tl.append("narrator", line)
+    tl.append("narrator", ARCHITECTURE[0])
 
     marks["live"] = tl.end + 0.9
     for turn in TURNS:
         turn["q_at"] = tl.append("nurse", turn["nurse"], gap=0.8)
         turn["a_at"] = tl.append("interviewee", turn["them"], gap=0.35)
         turn["post_at"] = tl.end + 0.15
-        tl.append("narrator", turn["why"], gap=1.6)
-        tl.append("narrator", turn["working"], gap=1.2)
+        tl.append("narrator", turn["working"], gap=1.5)
+        # Placed inside the wait, not before it. The agent takes ~20s and the
+        # previous cut left nine to twelve seconds of that silent.
+        tl.append("narrator", turn["why"], gap=3.5)
         # A verdict takes 15-21s on the deployed service. The line announcing it
         # must land *after* that, or the narration claims something the screen
         # has not done — which is exactly what the previous cut did.
@@ -259,10 +267,15 @@ async def main() -> None:
         turn["done_by"] = tl.end + 1.5
         chunk_wav(turn)
 
+    marks["console"] = tl.end + 0.7
+    for line in CONSOLE_LINES:
+        tl.append("narrator", line, gap=0.9)
+    marks["console_end"] = tl.end + 0.6
+
     marks["gate"] = tl.end + 0.8
     tl.append("narrator", "She asks for the report. It refuses.", gap=0.6)
     tl.append("narrator", "The agent drafts each follow-up itself and routes it. "
-                          "Nothing is ever left silently blank.", gap=5.0)
+                          "Nothing is ever left silently blank.", gap=3.0)
     marks["close"] = tl.end + 0.8
     for line in CLOSING:
         tl.append("narrator", line, gap=0.7)
@@ -271,6 +284,14 @@ async def main() -> None:
     print(f"   {len(tl.items)} clips · {tl.end:.1f}s total")
     if tl.end > 243:
         raise SystemExit(f"{tl.end:.0f}s exceeds the 4:00 limit")
+
+    # A dark slate the console footage replaces, so the placeholder is never
+    # mistaken for the finished cut if a splice is skipped.
+    (OUT / "console-slate.html").write_text(
+        "<!doctype html><meta charset=utf-8><style>body{margin:0;"
+        "background:#0b1615;color:#7fdcbb;display:grid;place-items:center;"
+        "height:100vh;font:600 30px ui-monospace,Menlo,monospace}</style>"
+        "<div>Cloud Run · live logs</div>")
 
     print("2. running the eval for real")
     evidence = build_evidence(OUT / "evidence.html")
@@ -365,6 +386,17 @@ async def main() -> None:
             if n == 11:
                 await move_click(page, ".highlight .mini.confirm")
 
+        # A placeholder held for exactly the console segment's length. The real
+        # footage is spliced over this window afterwards; holding the app here
+        # would waste the beat, and cutting in blind would drift.
+        await page.goto(f"file://{OUT / 'console-slate.html'}")
+        await hold(page, marks["console_end"], t0,
+                   "Cloud Run · live logs",
+                   "ADK naming the model · the call to aiplatform · three "
+                   "Gemini calls in parallel")
+        await page.goto(f"{APP}/?session={sid}", wait_until="networkidle")
+        await page.wait_for_selector(".item", timeout=30000)
+
         await hold(page, marks["gate"] - 0.8, t0, "Asking for the report", "")
         await move_click(page, "button:has-text('Finish')")
         await page.wait_for_selector(".gate-card", timeout=60000)
@@ -416,7 +448,29 @@ async def main() -> None:
           f"intake/data/panel/sessions/{sid}?project=agent-era")
 
     raw = max(OUT.glob("*.webm"), key=lambda f: f.stat().st_mtime)
-    print("\n5. muxing")
+
+    if CONSOLE.exists():
+        # Overlay, not insert. Inserting would push everything after it later
+        # and every narration line placed against this timeline would land on
+        # the wrong frames. Overlaying keeps the clock identical, and the
+        # placeholder was held for exactly this long.
+        print("5. overlaying the console footage")
+        start, end = marks["console"] - 1.0, marks["console_end"]
+        overlaid = OUT / "with-console.mp4"
+        subprocess.run([
+            "ffmpeg", "-y", "-loglevel", "error", "-i", str(raw), "-i", str(CONSOLE),
+            "-filter_complex",
+            (f"[1:v]scale=1440:-2,setpts=PTS-STARTPTS+{start}/TB[c];"
+             f"[0:v][c]overlay=x=(W-w)/2:y=(H-h)/2:"
+             f"enable='between(t,{start},{end})'[v]"),
+            "-map", "[v]", "-an", "-c:v", "libx264", "-preset", "medium",
+            "-crf", "20", "-pix_fmt", "yuv420p", str(overlaid)], check=True)
+        raw.unlink(missing_ok=True)
+        raw = overlaid
+    else:
+        print("5. no console footage at demo/console-proof.mp4 — using the slate")
+
+    print("6. muxing")
     subprocess.run(tl.mix_args(raw, FINAL), check=True)
     raw.unlink(missing_ok=True)
     print(f"   {FINAL}")
