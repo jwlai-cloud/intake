@@ -42,10 +42,22 @@ VOICES = {
 # is the difference between a demo that sounds like a screen reader and one that
 # sounds like a room with two people in it.
 STYLE = {
-    "narrator": "Read this clearly and calmly, like a documentary voice-over. Measured pace:",
-    "nurse": "Say this warmly and professionally, like a community nurse talking to a patient she likes:",
-    "interviewee": "Say this like an elderly woman at home, a little vague and hesitant, unhurried:",
+    "narrator": "Read this briskly and clearly, like a confident product narrator "
+                "who has a lot to cover. Keep it moving, no dramatic pauses:",
+    "nurse": "Say this warmly and briskly, like a community nurse who has done this "
+             "a thousand times:",
+    "interviewee": "Say this like an elderly woman at home, a little vague, but do "
+                   "not drag it out:",
 }
+
+# Delivery came out at 70 words per minute — roughly half a normal narration
+# pace, which read as slow and burned time that content needed. The prompt above
+# helps; this guarantees it. Applied at synthesis so measured durations, and
+# therefore every placement on the timeline, stay correct.
+# The brisker prompt alone took the narrator from 70 wpm to about 200, which
+# is too fast to follow. These pull it back to a natural reading pace; measured,
+# not guessed — see the wpm figure printed by this module's self-check.
+TEMPO = {"narrator": 0.94, "nurse": 1.0, "interviewee": 0.95}
 
 _client: genai.Client | None = None
 
@@ -66,7 +78,9 @@ def synth(role: str, text: str) -> pathlib.Path:
     """Return a wav of `text` spoken by `role`, generating it only once."""
     CACHE.mkdir(exist_ok=True)
     voice = VOICES[role]
-    key = hashlib.sha256(f"{MODEL}|{voice}|{STYLE[role]}|{text}".encode()).hexdigest()[:16]
+    key = hashlib.sha256(
+        f"{MODEL}|{voice}|{STYLE[role]}|{TEMPO.get(role, 1.0)}|{text}".encode()
+    ).hexdigest()[:16]
     path = CACHE / f"{role}-{key}.wav"
     if path.exists():
         return path
@@ -84,11 +98,21 @@ def synth(role: str, text: str) -> pathlib.Path:
         ),
     )
     pcm = resp.candidates[0].content.parts[0].inline_data.data
-    with wave.open(str(path), "wb") as w:
+    raw = path.with_suffix(".raw.wav")
+    with wave.open(str(raw), "wb") as w:
         w.setnchannels(1)
         w.setsampwidth(2)
         w.setframerate(SAMPLE_RATE)
         w.writeframes(pcm)
+
+    tempo = TEMPO.get(role, 1.0)
+    if tempo == 1.0:
+        raw.rename(path)
+        return path
+    # atempo preserves pitch, so a faster read still sounds like the same person.
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw),
+                    "-filter:a", f"atempo={tempo}", str(path)], check=True)
+    raw.unlink(missing_ok=True)
     return path
 
 
@@ -174,15 +198,20 @@ class Timeline:
 if __name__ == "__main__":
     # Smoke test: one line per voice, and prove the overlap check bites.
     tl = Timeline()
-    for role, line in [
-        ("narrator", "A community nurse has ninety minutes and a form she must complete."),
+    LINES = [
+        ("narrator", "A community nurse has ninety minutes and a form she is "
+                     "legally required to complete, and ninety minutes is never "
+                     "enough for all of it."),
         ("nurse", "Have you had any falls in the last year?"),
         ("interviewee", "Oh, I've had a couple of wobbles."),
-    ]:
+    ]
+    for role, line in LINES:
         at = tl.append(role, line)
         print(f"  {role:12} {at:5.1f}s  {duration(synth(role, line)):4.1f}s")
     tl.check()
-    print(f"  total {tl.end:.1f}s — no overlaps")
+    words = sum(len(t.split()) for _, t in LINES)
+    speech = sum(d for _, d, _, _ in tl.items)
+    print(f"  total {tl.end:.1f}s — no overlaps · {words / (speech / 60):.0f} wpm")
 
     assert not tl.place(0.0, "narrator", "This should be refused."), \
         "overlap check failed to bite"
