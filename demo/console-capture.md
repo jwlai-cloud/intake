@@ -35,6 +35,29 @@ answering a question the viewer already has.
 - Record at 1440×900 or larger, so it matches the rest of the cut.
 - No narration needed — I lay the voice-over over it.
 
+## Filming the logs live (the strongest shot)
+
+Stills are valid proof — logs are timestamped records of real execution either
+way. But watching lines arrive is more convincing, and it costs about ten cents.
+
+1. Open the logs page, click **Stream logs**, zoom to **150%**, start recording.
+2. Say go. I run:
+
+   ```bash
+   uv run python demo/generate-traffic.py
+   ```
+
+   It counts down eight seconds, then drives four real interview chunks through
+   the deployed service — each routing to different items, so the lines say
+   something different each time rather than repeating.
+3. Watch `chunk routed to 2 of 14 open items: ['M14', 'M06']` appear as it
+   happens. Record 30–45 seconds.
+4. It prints the session id when it finishes, so the lines you filmed are
+   traceable to one interview, and prints links to the Vertex and Firestore
+   pages to grab while they are fresh.
+
+The rest of the shots below can be stills.
+
 ## The three shots
 
 One screenshot each. Take them at full-screen browser, and check the text is
