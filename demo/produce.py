@@ -123,8 +123,9 @@ CLOSING = [
     "Forty-seven labelled cases, scored against the live service. One hundred "
     "percent precision on sufficient — it has never once ticked an answer a "
     "human labelled insufficient.",
-    "Same engine, a different profession, no code changed. Every competitor "
-    "ticks on mention. Intake ticks on answered.",  # last line  # closing line
+    "Same engine, a different profession, no code changed. The vertical is a "
+    "JSON template.",
+    "Every competitor ticks on mention. Intake ticks on answered.",  # closing line
 ]
 
 
@@ -194,9 +195,16 @@ def build_evidence(out: pathlib.Path) -> pathlib.Path:
 
 
 async def caption(page, text: str, why: str, at: float) -> None:
-    await page.evaluate(
-        "([t, s]) => window.rhCaption && window.rhCaption(t, s)",
-        [f"{text}<em>{why}</em>" if why else text, at])
+    # Wait for the overlay rather than no-op past it. The `&&` guard was written
+    # to be safe after a navigation, but what it actually did was silently skip
+    # painting — which is why the closing beat kept showing an empty bar.
+    try:
+        await page.wait_for_function(
+            "() => typeof window.rhCaption === 'function'", timeout=5000)
+    except Exception:
+        return
+    await page.evaluate("([t, s]) => window.rhCaption(t, s)",
+                        [f"{text}<em>{why}</em>" if why else text, at])
 
 
 async def hold(page, until: float, t0: float, text: str, why: str = "") -> None:
@@ -270,12 +278,15 @@ async def main() -> None:
     marks["console"] = tl.end + 0.7
     for line in CONSOLE_LINES:
         tl.append("narrator", line, gap=0.9)
-    marks["console_end"] = tl.end + 0.6
+    marks["console_end"] = max(tl.end + 0.6, marks["console"] + 20.5)
 
     marks["gate"] = tl.end + 0.8
     tl.append("narrator", "She asks for the report. It refuses.", gap=0.6)
-    tl.append("narrator", "The agent drafts each follow-up itself and routes it. "
-                          "Nothing is ever left silently blank.", gap=3.0)
+    tl.append("narrator", "The agent drafts each follow-up itself, and routes it "
+                          "to the occupational therapy queue. Nothing is ever "
+                          "left silently blank.", gap=2.5)
+    tl.append("narrator", "The report is assembled from what was recorded. "
+                          "There is no model call in it at all.", gap=1.4)
     marks["close"] = tl.end + 0.8
     for line in CLOSING:
         tl.append("narrator", line, gap=0.7)
