@@ -113,3 +113,16 @@ def test_title_metric_accepts_a_topic_label():
 def test_title_metric_catches_characterisation(title):
     bad = _coaching(highlights=[{"item_id": "M24", "title": title, "quote": ""}])
     assert _metric("highlight_titles_are_bare_labels")(_instance(bad))["score"] == 0
+
+
+@pytest.mark.parametrize("title", [
+    "Informal support arrangements",   # contains "formal" as a substring only
+    "Falls in the last 12 months",     # the template's own item prompt
+    "Details of most recent fall",
+    "Medication adherence",
+])
+def test_title_metric_accepts_legitimate_labels(title):
+    """These four all failed the first version of this metric. Three were the
+    metric's fault, not the agent's — a substring test and too tight a word cap."""
+    ok = _coaching(highlights=[{"item_id": "M14", "title": title, "quote": ""}])
+    assert _metric("highlight_titles_are_bare_labels")(_instance(ok))["score"] == 1

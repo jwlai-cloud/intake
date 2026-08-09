@@ -18,14 +18,37 @@ harness is for.
 
 ## Running it
 
+`agents-cli eval run` does **not** work here, and the reason is worth knowing:
+it derives the ADK app name from the manifest's `agent_directory`, so it asks
+the server for an app called `backend/adk_apps/intake`. ADK's `api_server`
+serves apps by *directory name* — `intake` — and returns 404 for the path form.
+
+Start the server yourself, rooted at the package's parent, and point eval at it:
+
 ```bash
-cd backend
-uv run agents-cli eval run --config tests/eval/eval_config.yaml
+# terminal 1 — from backend/
+PYTHONPATH=$PWD uv run adk api_server adk_apps --port 18099
+curl -s localhost:18099/list-apps          # => ["intake"]
+
+# terminal 2 — from the repo root
+uv run agents-cli eval generate --url http://127.0.0.1:18099 --app-name intake \
+    --dataset backend/tests/eval/datasets/pipeline.json
+uv run agents-cli eval grade --config backend/tests/eval/eval_config.yaml \
+    --traces artifacts/traces/<the file generate just wrote>
 ```
 
-`eval run` chains `generate` (inference — this is the part that costs money)
-and `grade` (free, see below). Results land in `artifacts/grade_results/` as
-timestamped `.json` and `.html`.
+**Pass `--traces` explicitly.** Without it, `grade` loads *every* trace file in
+`artifacts/traces/` and averages them together. Stale traces from an earlier
+run will drag a passing score down and, worse, report failures that the current
+code does not produce — which is exactly what happened the first time this ran:
+a title bug fixed days earlier reappeared in the summary because a 6 Aug trace
+was still sitting in the directory.
+
+If Vertex returns `403 PERMISSION_DENIED` on `aiplatform.endpoints.predict`
+despite you owning the project, check `GOOGLE_APPLICATION_CREDENTIALS` — if it
+points at another project's service account it silently overrides ADC, and
+every call authenticates as the wrong principal. `env -u
+GOOGLE_APPLICATION_CREDENTIALS` in front of the command is the quick check.
 
 ## Cost, deliberately
 
@@ -74,3 +97,27 @@ Run them like any other test:
 ```bash
 cd backend && uv run pytest tests/test_eval_metrics.py
 ```
+
+They earned their keep immediately. The first real run scored the title metric
+at 0.667, and three of its four failures were the metric's fault, not the
+agent's: a substring test flagged `"Informal support arrangements"` for
+containing `"formal"`, and a four-word cap rejected the template's own item
+prompt `"Falls in the last 12 months"`. Both are now regression tests.
+
+## Result, 9 Aug 2026
+
+Three cases, current code, graded against today's traces only:
+
+| Metric | Score |
+|---|---|
+| `highlight_quotes_are_verbatim` | 1.00 |
+| `next_question_targets_a_real_item` | 1.00 |
+| `highlight_titles_are_bare_labels` | 1.00 |
+
+Titles emitted were `Mobility`, `Falls`, `Alcohol intake` — the decline case,
+which historically produced `"Formal decline to answer alcohol question"`, now
+names the topic and nothing more.
+
+Three cases is a small sample and should not be read as more than it is: it
+says the pipeline holds on the three scenarios the demo shows, not that it
+holds generally.

@@ -132,13 +132,15 @@ custom_metrics:
   # phrases: "Falls", "Alcohol intake".
   - name: highlight_titles_are_bare_labels
     custom_function: |
-      import json
+      import json, re
 
-      # Words that only appear when the title has stopped naming a topic and
-      # started describing the answer or the person.
-      LOADED = ("decline", "declin", "refus", "reluctan", "vague", "unclear",
-                "poor", "concern", "risk of", "unable", "evasive", "formal",
-                "admits", "denies", "reports", "possible", "suggests")
+      # Words that appear when a title stops naming a topic and starts
+      # describing the answer or the person. Matched on word boundaries: a
+      # substring test flagged "Informal support arrangements" for containing
+      # "formal", which is a perfectly good topic label.
+      LOADED = (r"declines?|declined|declining|refus\w*|reluctan\w*|vague|"
+                r"unclear|poor|concern\w*|unable|evasive|formal|admits|denies|"
+                r"reports|possible|suggests|risk of")
 
       def _coach_payload(instance):
           blobs = []
@@ -165,11 +167,13 @@ custom_metrics:
           bad = []
           for h in (coaching.get("highlights") or []):
               title = (h.get("title") or "").strip()
-              low = title.lower()
-              if any(w in low for w in LOADED):
+              if re.search(rf"\b({LOADED})\b", title, re.I):
                   bad.append(f"{title!r} (characterises)")
-              elif len(title.split()) > 4:
-                  bad.append(f"{title!r} (not a bare noun phrase)")
+              elif len(title.split()) > 8:
+                  # No word cap tight enough to catch a characterisation would
+                  # also pass the template's own prompts ("Falls in the last 12
+                  # months"). This only catches a title that is a sentence.
+                  bad.append(f"{title!r} (a sentence, not a label)")
           if bad:
               return {"score": 0, "explanation": "; ".join(bad)}
           return {"score": 1, "explanation": "titles are bare topic labels"}
