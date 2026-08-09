@@ -24,12 +24,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import time
 import uuid
 from typing import Any, AsyncGenerator
 
-from google.adk.agents import BaseAgent, LlmAgent, SequentialAgent
+from google.adk.agents import BaseAgent, LlmAgent
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.events import Event, EventActions
 from google.adk.runners import Runner
@@ -537,6 +536,3 @@ def is_high_risk_answered_by_agent(session: SessionState, item_id: str) -> bool:
     return (session.template[item_id].high_risk
             and slot.get("state") == ANSWERED
             and slot.get("source") != "practitioner")
-
-
-ROOT_AGENT_MODEL = os.environ.get("GEMINI_MODEL", DEFAULT_MODEL)
