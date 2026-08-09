@@ -1,5 +1,7 @@
 """The ADK turn pipeline. Offline: the model is stubbed, the wiring is real."""
 
+import json
+
 import pytest
 
 from intake_agent import agent as agent_mod
@@ -201,3 +203,70 @@ def test_is_verbatim_known_gap_quote_may_straddle_two_turns():
     """
     assert agent_mod.is_verbatim("Christmas. I don't", ["Three times since Christmas.",
                                                        "I don't go out much."]) is True
+
+
+# --- escalation drafting retries (ADR-0005's autonomous beat) ----------------
+
+class _FlakyRunner:
+    """Fails `fail_times` times, then yields a usable draft."""
+
+    def __init__(self, fail_times, payload=None):
+        self.fail_times, self.calls = fail_times, 0
+        self.payload = payload if payload is not None else {
+            "outstanding": "Home access not recorded.",
+            "why": "Not recorded during the visit.",
+            "destination": "Occupational therapy queue",
+        }
+        self.session_service = self
+
+    async def create_session(self, **_):
+        return type("S", (), {"id": "s"})()
+
+    def run_async(self, **_):
+        self.calls += 1
+        if self.calls <= self.fail_times:
+            raise RuntimeError("429 RESOURCE_EXHAUSTED")
+
+        async def gen():
+            yield type("E", (), {"content": type("C", (), {"parts": [
+                type("P", (), {"text": json.dumps(self.payload)})()]})()})()
+        return gen()
+
+
+def _escalator_with(store, runner):
+    esc = agent_mod.Escalator.__new__(agent_mod.Escalator)
+    esc.store, esc.runner = store, runner
+    esc.RETRY_DELAYS = (0.0, 0.0)
+    return esc
+
+
+@pytest.mark.asyncio
+async def test_escalation_retries_a_transient_failure(store, session):
+    runner = _FlakyRunner(fail_times=2)
+    state = await _escalator_with(store, runner).escalate(session.session_id, "M26")
+    assert runner.calls == 3, "should have retried twice before succeeding"
+    assert state.followups[-1]["destination"] == "Occupational therapy queue"
+
+
+@pytest.mark.asyncio
+async def test_escalation_files_anyway_when_every_attempt_fails(store, session):
+    runner = _FlakyRunner(fail_times=99)
+    state = await _escalator_with(store, runner).escalate(session.session_id, "M26")
+    assert state.slots["M26"]["state"] == "escalated", "the item must still resolve"
+    assert state.followups[-1]["destination"] == agent_mod.FALLBACK_DESTINATION
+
+
+@pytest.mark.asyncio
+async def test_escalation_substitutes_an_invented_queue(store, session):
+    runner = _FlakyRunner(fail_times=0, payload={
+        "outstanding": "x", "why": "y", "destination": "Cardiology triage desk"})
+    state = await _escalator_with(store, runner).escalate(session.session_id, "M26")
+    assert state.followups[-1]["destination"] == agent_mod.FALLBACK_DESTINATION, \
+        "a queue outside the closed list must never be filed"
+
+
+@pytest.mark.asyncio
+async def test_escalation_does_not_retry_an_empty_but_successful_draft(store, session):
+    runner = _FlakyRunner(fail_times=0, payload={})
+    await _escalator_with(store, runner).escalate(session.session_id, "M26")
+    assert runner.calls == 1, "the model answered; retrying costs money for nothing"

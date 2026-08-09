@@ -37,7 +37,7 @@ from google.genai import types
 
 from .adjudicator import DEFAULT_MODEL, adjudicate
 from .router import route
-from .store import ANSWERED, BaseStore, SessionState
+from .store import ANSWERED, FALLBACK_DESTINATION, BaseStore, SessionState
 
 log = logging.getLogger(__name__)
 
@@ -518,7 +518,22 @@ def escalation_brief(session: SessionState, item_id: str,
 
 
 class Escalator:
-    """Drafts and files a follow-up action for an unresolved item."""
+    """Drafts and files a follow-up action for an unresolved item.
+
+    The drafting is retried, because it is the one place the agent exercises
+    unprompted judgement (ADR-0005) and a single transient 429 under a spend cap
+    would otherwise collapse it straight to boilerplate. Filing still succeeds
+    either way — `main.resolve_item` degrades rather than failing the request —
+    but degrading on the first hiccup throws away the beat for no reason.
+
+    An ADK `Workflow` with `RetryConfig` and a routed edge was tried for this
+    and rejected; see ADR-0013 for what it cost. This is the same capability in
+    a fraction of the code.
+    """
+
+    # Two retries, quickly. Escalation happens while the practitioner waits at
+    # the gate, so a long backoff is worse than a fallback.
+    RETRY_DELAYS = (0.5, 2.0)
 
     DESTINATIONS = [
         "District nursing team inbox",
@@ -541,31 +556,71 @@ class Escalator:
         session = self.store.get(session_id)
         brief = escalation_brief(session, item_id, self.DESTINATIONS)
 
-        adk_session = await self.runner.session_service.create_session(
-            app_name=APP_NAME,
-            user_id=session.practitioner_id,
-            state={"escalation_brief": brief},
-        )
-        drafted = {}
-        async for event in self.runner.run_async(
-            user_id=session.practitioner_id,
-            session_id=adk_session.id,
-            new_message=types.Content(
-                role="user", parts=[types.Part.from_text(text="Draft the follow-up.")]
-            ),
-        ):
-            if event.content and event.content.parts:
-                drafted = _loads(event.content.parts[0].text or "") or drafted
+        drafted = await self._draft(session, brief)
 
+        # The model may not invent a queue: a follow-up filed to a destination
+        # nobody reads is the failure the gate exists to prevent, arriving by
+        # the back door. Substitution used to be silent, which reads as a
+        # routing decision when it is really a routing failure.
         destination = drafted.get("destination", "")
         if destination not in self.DESTINATIONS:
-            destination = "Unassigned follow-up queue"
+            if destination:
+                log.warning("escalation for %s named %r, which is not a permitted "
+                            "queue — substituting %s",
+                            item_id, destination[:60], FALLBACK_DESTINATION)
+            destination = FALLBACK_DESTINATION
 
         return self.store.resolve(
             session_id, item_id, "escalated",
             reason=drafted.get("why") or "Not recorded during the visit.",
             destination=destination,
         )
+
+    async def _draft(self, session: SessionState, brief: str) -> dict:
+        """One drafting call, retried on transient failure.
+
+        Returns {} when every attempt fails; the caller then files the follow-up
+        with a fallback reason and destination. Losing the draft degrades the
+        record, but not filing it would leave the item unresolved and the report
+        blocked — which is the one outcome the three-state gate forbids.
+        """
+        last: Exception | None = None
+        for attempt, delay in enumerate((*self.RETRY_DELAYS, None)):
+            try:
+                adk_session = await self.runner.session_service.create_session(
+                    app_name=APP_NAME,
+                    user_id=session.practitioner_id,
+                    state={"escalation_brief": brief},
+                )
+                drafted: dict = {}
+                async for event in self.runner.run_async(
+                    user_id=session.practitioner_id,
+                    session_id=adk_session.id,
+                    new_message=types.Content(
+                        role="user",
+                        parts=[types.Part.from_text(text="Draft the follow-up.")]),
+                ):
+                    if event.content and event.content.parts:
+                        drafted = _loads(event.content.parts[0].text or "") or drafted
+                if drafted:
+                    return drafted
+                # A well-formed run that produced nothing usable is not worth
+                # retrying — the model answered, just not with a follow-up.
+                return {}
+            except Exception as exc:
+                last = exc
+                if delay is None:
+                    break
+                # Never log the exception text: a Vertex error echoes the
+                # request, and the brief contains interviewee speech (ADR-0007).
+                log.warning("escalation draft attempt %d failed (%s) — retrying "
+                            "in %.1fs", attempt + 1, type(exc).__name__, delay)
+                await asyncio.sleep(delay)
+
+        log.error("escalation drafting failed after %d attempts (%s)",
+                  len(self.RETRY_DELAYS) + 1,
+                  type(last).__name__ if last else "no result")
+        return {}
 
 
 def is_high_risk_answered_by_agent(session: SessionState, item_id: str) -> bool:

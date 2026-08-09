@@ -46,6 +46,12 @@ OPEN, PARTIAL, ANSWERED, DECLINED, ESCALATED = (
 )
 RESOLVED_STATES = {ANSWERED, DECLINED, ESCALATED}
 
+# Where a follow-up goes when no permitted queue was chosen. Defined here, at
+# the layer that writes it, so the agent and the store cannot disagree about
+# the string — a follow-up filed under two different fallback names is two
+# queues nobody is watching.
+FALLBACK_DESTINATION = "Unassigned follow-up queue"
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -222,7 +228,7 @@ class BaseStore:
                 "item_id": item_id,
                 "outstanding": item.prompt,
                 "why": reason,
-                "destination": destination or "Unassigned follow-up queue",
+                "destination": destination or FALLBACK_DESTINATION,
                 "drafted_at": _now(),
             })
         else:
