@@ -227,6 +227,15 @@ class AdjudicationAgent(BaseAgent):
                     continue
                 if not verdict.addressed:
                     continue  # this chunk said nothing about the item
+                if not is_verbatim(verdict.evidence, heard):
+                    # Observation only for now — the verdict still stands and
+                    # the quote is still stored. Measuring the real rate before
+                    # enforcing, because over-blanking legitimate quotes is its
+                    # own failure. Never log the span itself: ADR-0007, Cloud
+                    # Logging outlives the session document.
+                    log.warning("             %s · evidence is not verbatim "
+                                "(%d chars, not found in %d turn(s))",
+                                item.id, len(verdict.evidence), len(heard))
                 after = self.store.apply_verdict(
                     session_id, item.id, verdict.verdict,
                     value=verdict.evidence, evidence=verdict.evidence,
@@ -298,6 +307,32 @@ def build_coach_brief(session: SessionState, turns: list[str]) -> str:
     lines.append("\nVerbatim interviewee turns from this chunk:")
     lines.extend(f'- "{t}"' for t in turns) if turns else lines.append("- (none)")
     return "\n".join(lines)
+
+
+def is_verbatim(quote: str, turns: list[str]) -> bool:
+    """True if `quote` really appears in what was said.
+
+    Both the adjudicator ("`evidence` must be a verbatim substring of the
+    transcript") and the coach ("every quote must appear verbatim in the
+    brief") are told to quote rather than paraphrase, and until now nothing
+    checked. A paraphrase is stored and rendered to the practitioner as a
+    transcript span, in a report she signs.
+
+    Normalisation is what separates a guard from a nuisance: models routinely
+    return a curly apostrophe for a straight one, or re-wrap whitespace. Those
+    are the same words and must not read as fabrication. Anything beyond that —
+    a changed word, a tidied hedge, a summarised clause — is not a quote.
+
+    An empty quote is vacuously fine; it just means nothing was captured.
+    """
+    if not quote or not quote.strip():
+        return True
+    said = _normalise(" ".join(turns))
+    return _normalise(quote) in said
+
+
+def _normalise(text: str) -> str:
+    return " ".join(text.replace("’", "'").replace("‘", "'").lower().split())
 
 
 def _loads(raw: str) -> dict:
@@ -408,9 +443,16 @@ class TurnRunner:
             self.store.set_next_question(session_id, nq)
 
         highlights = []
+        heard = session.recent_turns
         for n, h in enumerate(coaching.get("highlights") or []):
             if h.get("item_id") not in session.template.items:
                 continue  # the coach may not invent items
+            if not is_verbatim(h.get("quote", ""), heard):
+                # See the note in AdjudicationAgent: observing, not yet
+                # enforcing, and never logging the quote itself.
+                log.warning("highlight quote for %s is not verbatim "
+                            "(%d chars, not found in %d turn(s))",
+                            h["item_id"], len(h.get("quote", "")), len(heard))
             highlights.append({
                 # Not count-based: add_highlights dedupes on quote, so the
                 # count after a batch is not len(before) + n, and a later batch

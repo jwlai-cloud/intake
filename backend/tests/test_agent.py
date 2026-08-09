@@ -170,3 +170,34 @@ class _FakeCtx:
 
 def _ctx(session_id, turns):
     return _FakeCtx({"intake_session_id": session_id, "transcript": {"turns": turns}})
+
+
+# --- verbatim-quote detection (the observation step for ADR-0006) ------------
+
+@pytest.mark.parametrize("quote, ok", [
+    ("Three times since Christmas", True),
+    ("three times SINCE christmas", True),        # case is not fabrication
+    ("Three  times   since Christmas", True),     # nor is re-wrapped whitespace
+    ("I don’t go out", True),                     # nor a curly apostrophe
+    ("", True),                                   # nothing captured is fine
+    ("   ", True),
+    ("She has fallen three times", False),        # paraphrase
+    ("Four times since Christmas", False),        # one word changed
+])
+def test_is_verbatim(quote, ok):
+    turns = ["Three times since Christmas.", "I don't go out much."]
+    assert agent_mod.is_verbatim(quote, turns) is ok
+
+
+def test_is_verbatim_known_gap_quote_may_straddle_two_turns():
+    """Known limitation, recorded rather than hidden.
+
+    Turns are joined with a space before the substring test, so a "quote" that
+    starts in one turn and ends in the next passes — a sentence nobody actually
+    spoke as one. Checking each turn separately would fix it, but would also
+    reject the legitimate case of an answer delivered across two turns, which
+    the adjudicator explicitly combines. Left as-is deliberately; tighten only
+    with evidence that the model does this.
+    """
+    assert agent_mod.is_verbatim("Christmas. I don't", ["Three times since Christmas.",
+                                                       "I don't go out much."]) is True
