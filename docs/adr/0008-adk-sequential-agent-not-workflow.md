@@ -1,7 +1,15 @@
 # 0008 — ADK 2.6.2: SequentialAgent now, Workflow later
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0010 (the orchestrator) and ADR-0013 (the
+  migration path). **Contains a factual error — see the correction below.**
 - **Date:** 2026-08-05
+
+> **Correction (2026-08-09).** This ADR reads the deprecation warning
+> backwards. ADK says a `Workflow` cannot be nested *inside* an `LlmAgent`; it
+> does not say a `Workflow` cannot *contain* one. `LlmAgent` and `BaseAgent`
+> are both `BaseNode` subclasses and compose into a graph fine. The migration
+> was never blocked by the reason given here. ADR-0013 records the real
+> blocker and the decision that replaces this one.
 
 ## Context
 

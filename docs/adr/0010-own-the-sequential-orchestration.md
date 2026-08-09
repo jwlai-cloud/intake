@@ -10,6 +10,11 @@ on the grounds that the replacement graph `Workflow` API cannot yet take an
 `LlmAgent` as a sub-agent, and that a deprecation warning in test output harms
 nobody.
 
+> **Correction (2026-08-09).** That first ground was a misreading of the
+> warning and is false — see ADR-0013. It does not change this ADR's decision,
+> which rests entirely on the eval-compatibility argument below, and that
+> argument holds: it applies to the `Workflow` graph too.
+
 Adding behavioural evaluation with `agents-cli eval` invalidated that reasoning.
 `eval generate` rejects any agent event lacking `content`:
 

@@ -1,7 +1,7 @@
 """The ADK agent that runs one interview turn.
 
-One audio chunk in, one bounded turn of work out. The pipeline is a
-`SequentialAgent` of three stages:
+One audio chunk in, one bounded turn of work out. The pipeline is a custom
+`BaseAgent` (`TurnPipeline`, below) running three stages in order:
 
     transcribe → adjudicate (custom BaseAgent, fans out) → coach
 
@@ -314,21 +314,23 @@ def _loads(raw: str) -> dict:
 class TurnPipeline(BaseAgent):
     """Runs the three stages in order, forwarding each stage's events.
 
-    This was a `SequentialAgent`. It is hand-rolled now for two reasons that
-    arrived together:
+    This was a `SequentialAgent`. It is hand-rolled because both of ADK's own
+    orchestration primitives emit events that ADK's own eval CLI rejects.
 
-    1. `SequentialAgent` is deprecated in ADK 2.6.2 in favour of the graph
-       `Workflow` API, which cannot yet take an `LlmAgent` as a sub-agent — so
-       the obvious migration is blocked (ADR-0008).
-    2. More pressingly, `SequentialAgent` emits a container event carrying only
-       `actions` and no `content`, and `agents-cli eval generate` rejects any
-       content-less event outright with "Malformed agent event: missing
-       content". ADK's deprecated orchestrator is incompatible with ADK's
-       current eval tooling, so behavioural evaluation was impossible until
-       this stopped being a SequentialAgent.
+    `agents-cli eval generate` raises on any event lacking `author` or
+    `content`, and it parses the whole SSE stream in one comprehension — so the
+    first such event fails the entire eval case. `SequentialAgent` emits a
+    container event carrying only `actions`. The graph `Workflow` emits
+    `Event(output=...)` with no `content` for node-to-node data passing, and so
+    fails identically (measured — see ADR-0013).
 
-    Sequential composition is a four-line loop, so owning it costs nothing and
-    means every event in the trace is one we deliberately emitted.
+    A custom `BaseAgent` is not deprecated in 2.6.2 and is the only one of the
+    three where every emitted event is one we deliberately wrote. Sequential
+    composition is a four-line loop, so owning it costs nothing.
+
+    ADR-0008 claimed the graph migration was blocked because `Workflow` cannot
+    take an `LlmAgent` as a sub-agent. That was a misreading of the deprecation
+    warning, which says the reverse; ADR-0013 corrects it.
     """
 
     async def _run_async_impl(
