@@ -80,6 +80,32 @@ and the current code turns one failed item into "stays open, retried next
 chunk", behaviour that would have to be rebuilt inside the node. The gain is
 ADK-native span naming.
 
+## Addendum — the escalation path was tried too, and also rejected
+
+The eval constraint above only binds the *turn pipeline*, since that is what
+`tests/eval/` runs. Escalation is unevaluated and genuinely graph-shaped —
+`draft (LlmAgent) → validate destination (code) → {ok | substituted}` — with a
+real capability gain available: `RetryConfig` on the draft node, which the path
+had no equivalent of at all.
+
+It was built, and reverted. What it cost:
+
+`_graph_validation.py:171` validates statically with
+`from_node.output_schema != to_node.input_schema` — plain object inequality.
+A `FunctionNode` derives its input schema from the function signature and its
+constructor takes no `input_schema`, so a derived schema can never equal a
+declared one. Making the edge validate needed three workarounds: Pydantic
+models for the schemas, a post-construction `node.input_schema = Model`
+assignment, and `input_schema = None` on the downstream nodes.
+
+Three workarounds against the framework, to replace a one-line `if`. The
+capability — retry, and a visible rather than silent substitution — is about
+twenty lines of plain Python, and shipped that way.
+
+Also observed while testing: the failed attempts of a retried node emit
+`Event(output=None, content=None)`. So even this graph would have been
+un-evaluable, which only did not matter because escalation is not evaluated.
+
 ## What would make this wrong
 
 - ADK giving graph nodes a default `content`, or `agents-cli eval` tolerating
