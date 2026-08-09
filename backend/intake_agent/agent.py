@@ -569,10 +569,22 @@ class Escalator:
 
 
 def is_high_risk_answered_by_agent(session: SessionState, item_id: str) -> bool:
-    """True if a high-risk item was closed by the agent rather than a human.
+    """True if a high-risk item was closed from the interview rather than by hand.
 
-    Nothing should ever make this true — high-risk items are the practitioner's
-    to write (ADR-0006) — so it exists to be asserted against.
+    This used to claim "nothing should ever make this true". That was wrong,
+    and its own test asserts the opposite: M14 (falls) is high_risk, and M14
+    resolving from a sufficient interview answer is the normal, intended path —
+    it is the central beat of the demo.
+
+    ADR-0006's high-risk rule is narrower than that claim. It constrains the
+    *coach*: for a high-risk item, ask the question and offer no suggested
+    answer. Adjudicating that a human gave a sufficient answer is recording
+    domain content, not authoring it.
+
+    So this is a reporting predicate, not an invariant: it says which resolved
+    high-risk items came from the interview rather than the practitioner's own
+    hand, which is worth surfacing at review time. Do not wire it in as a
+    write-path guard — it would block the product's main path.
     """
     slot = session.slots.get(item_id, {})
     return (session.template[item_id].high_risk
