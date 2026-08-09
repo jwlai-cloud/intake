@@ -32,6 +32,39 @@
           }
         ]
       }
+    },
+    {
+      "eval_case_id": "high-risk-item-gets-no-suggested-answer",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Practitioner: Have you noticed any soreness or redness on your skin, anywhere you sit or lie for a long time?\nInterviewee: There's a patch at the bottom of my back that's been bothering me."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "off-topic-chunk-touches-nothing",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Practitioner: Shall I put the kettle on before we start?\nInterviewee: Go on then, the cups are in the cupboard above the sink."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "practitioner-supplying-the-answer-does-not-count",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Practitioner: So that's three falls since Christmas, and the last one was coming down the stairs in May, is that right?\nInterviewee: Mm."
+          }
+        ]
+      }
     }
   ]
 }
