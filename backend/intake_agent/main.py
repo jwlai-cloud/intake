@@ -17,7 +17,7 @@ import threading
 import time
 from collections import defaultdict, deque
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -181,11 +181,29 @@ class HighlightUpdate(BaseModel):
 
 
 @app.get("/health")
-def health() -> dict:
+def health(response: Response) -> dict:
     """Not /healthz — Cloud Run's frontend reserves that path and answers it
-    itself, so the request never reaches the container."""
-    return {"ok": True, "store": type(_store).__name__,
-            "tracing_configured": _tracing}
+    itself, so the request never reaches the container.
+
+    Fails when the session store silently degraded. `default_store()` runs at
+    import, so a Firestore blip during a cold start pinned that instance to
+    in-memory storage for its whole life while still reporting ok — sessions on
+    it vanish on restart, and at --max-instances=2 that is up to half the
+    traffic. Reporting it as unhealthy lets Cloud Run replace the instance
+    instead of leaving it quietly losing interviews.
+
+    `INTAKE_STORE=memory` stays an explicit, healthy opt-out: choosing memory is
+    not the same as falling back to it.
+    """
+    chose_memory = os.environ.get("INTAKE_STORE", "").lower() == "memory"
+    degraded = (type(_store).__name__ == "MemoryStore"
+                and not chose_memory
+                and bool(os.environ.get("GOOGLE_CLOUD_PROJECT")))
+    if degraded:
+        response.status_code = 503
+    return {"ok": not degraded, "store": type(_store).__name__,
+            "tracing_configured": _tracing,
+            **({"detail": "session store degraded to memory"} if degraded else {})}
 
 
 @app.get("/templates")

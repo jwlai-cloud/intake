@@ -279,3 +279,34 @@ def test_escalation_still_files_when_the_model_is_unavailable(client, monkeypatc
     assert state.slots["M20"]["state"] == "escalated"
     assert state.followups[0]["item_id"] == "M20"
     assert state.followups[0]["destination"], "a follow-up with no destination is a gap"
+
+
+# --- /health fails when the store silently degraded (ADR-0004) ---------------
+
+def test_health_reports_503_when_firestore_fell_back_to_memory(client, monkeypatch):
+    """default_store() runs at import, so a cold-start Firestore blip pins an
+    instance to memory for its whole life. Cloud Run can only replace it if the
+    health check says so."""
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "agent-era")
+    monkeypatch.delenv("INTAKE_STORE", raising=False)
+    c, _ = client
+    r = c.get("/health")
+    assert r.status_code == 503
+    assert r.json()["ok"] is False
+    assert "degraded" in r.json()["detail"]
+
+
+def test_health_is_ok_when_memory_was_chosen_deliberately(client, monkeypatch):
+    monkeypatch.setenv("GOOGLE_CLOUD_PROJECT", "agent-era")
+    monkeypatch.setenv("INTAKE_STORE", "memory")
+    c, _ = client
+    r = c.get("/health")
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+
+
+def test_health_is_ok_locally_with_no_project_set(client, monkeypatch):
+    monkeypatch.delenv("GOOGLE_CLOUD_PROJECT", raising=False)
+    monkeypatch.delenv("INTAKE_STORE", raising=False)
+    c, _ = client
+    assert c.get("/health").status_code == 200

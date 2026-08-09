@@ -133,6 +133,9 @@ async def test_one_item_failing_does_not_lose_the_chunk(store, session, monkeypa
 def test_coaching_cannot_introduce_an_item_the_template_does_not_have(store, session):
     runner = TurnRunner.__new__(TurnRunner)  # no ADK Runner needed for this
     runner.store = store
+    # Both quotes are verbatim, so this isolates the item-id filter from the
+    # verbatim filter — otherwise a pass here could mean either rule fired.
+    store.append_turns(session.session_id, ["nope", "three falls"])
     runner._record_coaching(session.session_id, {
         "next_question": {"item_id": "M99", "prompt": "?", "why": "?"},
         "highlights": [{"item_id": "M99", "title": "made up", "quote": "nope"},
@@ -270,3 +273,51 @@ async def test_escalation_does_not_retry_an_empty_but_successful_draft(store, se
     runner = _FlakyRunner(fail_times=0, payload={})
     await _escalator_with(store, runner).escalate(session.session_id, "M26")
     assert runner.calls == 1, "the model answered; retrying costs money for nothing"
+
+
+# --- non-verbatim quotes are now dropped, not just logged --------------------
+
+@pytest.mark.asyncio
+async def test_paraphrased_evidence_is_dropped_but_the_verdict_stands(
+        store, session, monkeypatch):
+    """Whether the guidance was satisfied is a separate question from whether
+    the model copied the words. Keep the first, refuse to display the second."""
+    monkeypatch.setattr(agent_mod, "adjudicate", lambda item, turns, **k: Verdict(
+        "sufficient", "She has fallen three times.", (), "ok"))
+    stage = AdjudicationAgent(name="adjudication", store=store)
+    ctx = _ctx(session.session_id, [
+        {"speaker": "interviewee", "text": "Three times since Christmas."}])
+    [e async for e in stage._run_async_impl(ctx)]
+
+    slot = store.get(session.session_id).slots["M14"]
+    assert slot["state"] == "answered", "the verdict is unaffected"
+    assert slot["evidence"] == "", "an unverifiable span must not render as a quote"
+    assert slot["value"] == "", "nor leak into the report as the recorded answer"
+
+
+@pytest.mark.asyncio
+async def test_verbatim_evidence_is_kept(store, session, monkeypatch):
+    monkeypatch.setattr(agent_mod, "adjudicate", lambda item, turns, **k: Verdict(
+        "sufficient", "Three times since Christmas.", (), "ok"))
+    stage = AdjudicationAgent(name="adjudication", store=store)
+    ctx = _ctx(session.session_id, [
+        {"speaker": "interviewee", "text": "Three times since Christmas."}])
+    [e async for e in stage._run_async_impl(ctx)]
+    assert store.get(session.session_id).slots["M14"]["evidence"] == \
+        "Three times since Christmas."
+
+
+def test_a_fabricated_highlight_quote_is_dropped(store, session):
+    store.append_turns(session.session_id, ["Three times since Christmas."])
+    runner = TurnRunner.__new__(TurnRunner)
+    runner.store = store
+    runner._record_coaching(session.session_id, {
+        "next_question": {"item_id": "M14", "prompt": "?", "why": "?"},
+        "highlights": [
+            {"item_id": "M14", "title": "Falls", "quote": "Three times since Christmas."},
+            {"item_id": "M14", "title": "Falls", "quote": "I fall over constantly."},
+        ],
+    })
+    quotes = [h["quote"] for h in store.get(session.session_id).highlights]
+    assert quotes == ["Three times since Christmas."], \
+        "a highlight is its quote; an unverifiable one has nothing left to show"

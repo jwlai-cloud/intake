@@ -227,18 +227,26 @@ class AdjudicationAgent(BaseAgent):
                     continue
                 if not verdict.addressed:
                     continue  # this chunk said nothing about the item
-                if not is_verbatim(verdict.evidence, heard):
-                    # Observation only for now — the verdict still stands and
-                    # the quote is still stored. Measuring the real rate before
-                    # enforcing, because over-blanking legitimate quotes is its
-                    # own failure. Never log the span itself: ADR-0007, Cloud
-                    # Logging outlives the session document.
+                evidence = verdict.evidence
+                if not is_verbatim(evidence, heard):
+                    # The verdict stands — whether the guidance was satisfied is
+                    # a separate judgement from whether the model copied the
+                    # words correctly. But an unverifiable span is not a quote,
+                    # and this product's whole claim is that it shows the source
+                    # rather than a summary of it. Better a blank the
+                    # practitioner fills from the transcript than a sentence
+                    # nobody said, in a report she signs.
+                    #
+                    # Never log the span itself: a Vertex error echoes the
+                    # request and Cloud Logging outlives the session document
+                    # (ADR-0007).
                     log.warning("             %s · evidence is not verbatim "
-                                "(%d chars, not found in %d turn(s))",
-                                item.id, len(verdict.evidence), len(heard))
+                                "(%d chars, not found in %d turn(s)) — dropped",
+                                item.id, len(evidence), len(heard))
+                    evidence = ""
                 after = self.store.apply_verdict(
                     session_id, item.id, verdict.verdict,
-                    value=verdict.evidence, evidence=verdict.evidence,
+                    value=evidence, evidence=evidence,
                     missing=list(verdict.missing), reason=verdict.reason,
                 )
                 state_now = after.slots[item.id]["state"]
@@ -448,11 +456,13 @@ class TurnRunner:
             if h.get("item_id") not in session.template.items:
                 continue  # the coach may not invent items
             if not is_verbatim(h.get("quote", ""), heard):
-                # See the note in AdjudicationAgent: observing, not yet
-                # enforcing, and never logging the quote itself.
+                # A highlight *is* its quote — there is nothing left once the
+                # quote is untrustworthy, so drop the chip rather than render an
+                # empty one. Never log the quote itself (ADR-0007).
                 log.warning("highlight quote for %s is not verbatim "
-                            "(%d chars, not found in %d turn(s))",
+                            "(%d chars, not found in %d turn(s)) — dropped",
                             h["item_id"], len(h.get("quote", "")), len(heard))
+                continue
             highlights.append({
                 # Not count-based: add_highlights dedupes on quote, so the
                 # count after a batch is not len(before) + n, and a later batch
