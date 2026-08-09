@@ -1,0 +1,175 @@
+# Behavioural eval for the turn pipeline.
+#
+# This complements `eval/run_eval.py`, it does not replace it. That harness
+# scores the adjudicator *function*: one item, one labelled verdict, 47 cases.
+# This one scores the *pipeline*: what the coach does with the adjudicator's
+# output, which is where ADR-0006 can be violated without any verdict being
+# wrong.
+#
+# COST. Every metric here is a `custom_function`, which runs locally in-process
+# and makes no model calls at all. The only spend is inference — running the
+# three cases through the agent — and the dataset uses text prompts rather than
+# audio, because audio tokens dominate the pipeline's cost and none of the
+# properties under test need real speech.
+#
+#     ~3 cases x (transcribe + route + ~2 adjudicate + coach) = ~15 calls/run
+#
+# Do NOT add the built-in metrics (multi_turn_task_success,
+# final_response_quality, ...) without deciding you want to pay for them: each
+# is an LLM-as-judge call per case per metric. They also cannot check any of the
+# properties below, which are all deterministic — a judge asked "is this quote
+# verbatim?" is strictly worse than `in`.
+#
+#     cd backend && uv run agents-cli eval run --config tests/eval/eval_config.yaml
+
+metrics_to_run:
+  - highlight_quotes_are_verbatim
+  - next_question_targets_a_real_item
+  - highlight_titles_are_bare_labels
+
+custom_metrics:
+  # ADR-0006. The coach is told "never invent a quote: every quote must appear
+  # verbatim in the brief". Nothing enforces that in code today, so a
+  # paraphrase is stored and rendered to the practitioner as a verbatim
+  # transcript span. This is the regression guard for that.
+  - name: highlight_quotes_are_verbatim
+    custom_function: |
+      import json
+
+      def _coach_payload(instance):
+          """The coach stage's JSON, wherever it landed in the trace."""
+          blobs = []
+          data = instance.get("agent_data") or {}
+          for turn in data.get("turns") or []:
+              for event in turn.get("events") or []:
+                  for part in ((event.get("content") or {}).get("parts") or []):
+                      text = part.get("text") or ""
+                      if "next_question" in text or "highlights" in text:
+                          blobs.append(text)
+          for text in reversed(blobs):
+              try:
+                  parsed = json.loads(text)
+              except (TypeError, ValueError):
+                  continue
+              if isinstance(parsed, dict) and "next_question" in parsed:
+                  return parsed
+          return None
+
+      def _said(instance):
+          parts = (instance.get("prompt") or {}).get("parts") or []
+          return " ".join(p.get("text", "") for p in parts).lower()
+
+      def _norm(s):
+          return " ".join(s.lower().replace("’", "'").split())
+
+      def evaluate(instance):
+          coaching = _coach_payload(instance)
+          if coaching is None:
+              return {"score": 0, "explanation": "no coach output found in trace"}
+          said = _norm(_said(instance))
+          bad = [h.get("quote", "") for h in (coaching.get("highlights") or [])
+                 if h.get("quote") and _norm(h["quote"]) not in said]
+          if bad:
+              return {"score": 0,
+                      "explanation": "quote(s) not present in the transcript: "
+                                     + "; ".join(repr(b) for b in bad)}
+          return {"score": 1, "explanation": "every highlight quote is verbatim"}
+
+  # The coach may not invent items. `_record_coaching` already drops a
+  # next_question whose item_id is not in the session, so a failure here means
+  # the model is hallucinating ids and the practitioner silently gets no next
+  # question at all — a dead panel rather than a wrong one.
+  - name: next_question_targets_a_real_item
+    custom_function: |
+      import json, pathlib
+
+      def _template_ids():
+          here = pathlib.Path.cwd()
+          for base in [here, *here.parents]:
+              path = base / "templates" / "community-nursing-v1.json"
+              if path.exists():
+                  spec = json.loads(path.read_text())
+                  return {item["id"]
+                          for section in spec.get("sections", [])
+                          for item in section.get("items", [])}
+          return set()
+
+      def _coach_payload(instance):
+          blobs = []
+          data = instance.get("agent_data") or {}
+          for turn in data.get("turns") or []:
+              for event in turn.get("events") or []:
+                  for part in ((event.get("content") or {}).get("parts") or []):
+                      text = part.get("text") or ""
+                      if "next_question" in text:
+                          blobs.append(text)
+          for text in reversed(blobs):
+              try:
+                  parsed = json.loads(text)
+              except (TypeError, ValueError):
+                  continue
+              if isinstance(parsed, dict) and "next_question" in parsed:
+                  return parsed
+          return None
+
+      def evaluate(instance):
+          ids = _template_ids()
+          if not ids:
+              return {"score": 0, "explanation": "template not found from cwd"}
+          coaching = _coach_payload(instance)
+          if coaching is None:
+              return {"score": 0, "explanation": "no coach output found in trace"}
+          item_id = (coaching.get("next_question") or {}).get("item_id")
+          if item_id in ids:
+              return {"score": 1, "explanation": f"next_question targets {item_id}"}
+          return {"score": 0,
+                  "explanation": f"next_question.item_id {item_id!r} is not a template item"}
+
+  # ADR-0006 again, and the hole behavioural review actually found: the output
+  # schema forbids an answer *field*, but it does not forbid an interpretive
+  # *label*. The agent once emitted "Formal decline to answer alcohol question"
+  # — a characterisation of the person, not a topic. Titles must be bare noun
+  # phrases: "Falls", "Alcohol intake".
+  - name: highlight_titles_are_bare_labels
+    custom_function: |
+      import json
+
+      # Words that only appear when the title has stopped naming a topic and
+      # started describing the answer or the person.
+      LOADED = ("decline", "declin", "refus", "reluctan", "vague", "unclear",
+                "poor", "concern", "risk of", "unable", "evasive", "formal",
+                "admits", "denies", "reports", "possible", "suggests")
+
+      def _coach_payload(instance):
+          blobs = []
+          data = instance.get("agent_data") or {}
+          for turn in data.get("turns") or []:
+              for event in turn.get("events") or []:
+                  for part in ((event.get("content") or {}).get("parts") or []):
+                      text = part.get("text") or ""
+                      if "highlights" in text:
+                          blobs.append(text)
+          for text in reversed(blobs):
+              try:
+                  parsed = json.loads(text)
+              except (TypeError, ValueError):
+                  continue
+              if isinstance(parsed, dict) and "highlights" in parsed:
+                  return parsed
+          return None
+
+      def evaluate(instance):
+          coaching = _coach_payload(instance)
+          if coaching is None:
+              return {"score": 0, "explanation": "no coach output found in trace"}
+          bad = []
+          for h in (coaching.get("highlights") or []):
+              title = (h.get("title") or "").strip()
+              low = title.lower()
+              if any(w in low for w in LOADED):
+                  bad.append(f"{title!r} (characterises)")
+              elif len(title.split()) > 4:
+                  bad.append(f"{title!r} (not a bare noun phrase)")
+          if bad:
+              return {"score": 0, "explanation": "; ".join(bad)}
+          return {"score": 1, "explanation": "titles are bare topic labels"}

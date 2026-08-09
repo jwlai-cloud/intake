@@ -1,0 +1,37 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "vague-falls-answer",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Practitioner: Have you had any falls in the last year?\nInterviewee: Oh. I've had a couple of wobbles."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "specific-falls-answer",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Practitioner: How many times, and what happened the last one?\nInterviewee: Three times since Christmas. The last one was in May. I slipped coming down the stairs."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "formal-decline",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Practitioner: And can I ask how much you drink in a week?\nInterviewee: That's my own business, thank you. Put down that I'd rather not say."
+          }
+        ]
+      }
+    }
+  ]
+}
