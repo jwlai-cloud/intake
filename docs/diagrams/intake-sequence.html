@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="generator" content="archify 2.12.0">
+  <meta name="generator" content="archify 2.13.0">
   <title>Intake — one chunk, and the gate at the end Diagram</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
@@ -4692,11 +4692,11 @@
         </g>
         </g>
 
-        <g data-edge-from="adjudicator" data-edge-to="firestore" data-edge-label="M14 → partial, with the quote" data-edge-key="11" data-edge-id="write-slots">
+        <g data-edge-from="adjudicator" data-edge-to="firestore" data-edge-label="M14 → partial · quote if verbatim" data-edge-key="11" data-edge-id="write-slots">
           <path data-composition-edge-from="adjudicator" data-composition-edge-to="firestore" data-composition-edge-id="write-slots" data-composition-points="501,632;919,632" d="M 501 632 L 919 632" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
         <g data-detail="context">
-          <rect x="628.6" y="612" width="162.8" height="16" rx="3" class="c-mask"/>
-          <text x="710" y="622" class="t-backend" font-size="9" text-anchor="middle">M14 → partial, with the quote</text>
+          <rect x="618.2" y="612" width="183.6" height="16" rx="3" class="c-mask"/>
+          <text x="710" y="622" class="t-backend" font-size="9" text-anchor="middle">M14 → partial · quote if verbatim</text>
         </g>
         </g>
 
@@ -4756,11 +4756,11 @@
         </g>
         </g>
 
-        <g data-edge-from="escalator" data-edge-to="vertex" data-edge-label="draft the follow-up action" data-edge-key="19" data-edge-id="draft">
+        <g data-edge-from="escalator" data-edge-to="vertex" data-edge-label="draft the follow-up · 2 retries on 429" data-edge-key="19" data-edge-id="draft">
           <path data-composition-edge-from="escalator" data-composition-edge-to="vertex" data-composition-edge-id="draft" data-composition-points="717,940;811,940" d="M 717 940 L 811 940" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
         <g data-detail="context">
-          <rect x="690.4" y="920" width="147.20000000000002" height="16" rx="3" class="c-mask"/>
-          <text x="764" y="930" class="t-backend" font-size="9" text-anchor="middle">draft the follow-up action</text>
+          <rect x="659.2" y="920" width="209.6" height="16" rx="3" class="c-mask"/>
+          <text x="764" y="930" class="t-backend" font-size="9" text-anchor="middle">draft the follow-up · 2 retries on 429</text>
         </g>
         </g>
 
@@ -4893,15 +4893,25 @@
         </g>
 
         <!-- Legend -->
-        <text x="150" y="1046" class="t-primary" font-size="10" font-weight="600">Legend</text>
-        <path d="M 150 1066 L 184 1066" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
-        <text x="193" y="1069" class="t-muted" font-size="8">request</text>
-        <path d="M 270 1066 L 304 1066" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
-        <text x="313" y="1069" class="t-muted" font-size="8">return</text>
-        <path d="M 385 1066 L 419 1066" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
-        <text x="428" y="1069" class="t-muted" font-size="8">security</text>
-        <path d="M 530 1066 L 564 1066" class="a-dashed" stroke-width="1.4" marker-end="url(#arrowhead-dashed)"/>
-        <text x="573" y="1069" class="t-muted" font-size="8">async trace</text>
+        <g data-legend>
+          <text x="40" y="1046" class="t-primary" font-size="10" font-weight="600">Legend</text>
+          <g data-legend-semantic-kind="emphasis" data-legend-x="40" data-legend-baseline="1066" data-legend-width="78">
+            <path d="M 40 1063 L 74 1063" class="a-emphasis" stroke-width="1.8" marker-end="url(#arrowhead-emphasis)"/>
+            <text x="83" y="1066" class="t-muted" font-size="8">request</text>
+          </g>
+          <g data-legend-semantic-kind="return" data-legend-x="140" data-legend-baseline="1066" data-legend-width="73">
+            <path d="M 140 1063 L 174 1063" class="a-default" stroke-width="1.4" stroke-dasharray="3,5" marker-end="url(#arrowhead)"/>
+            <text x="183" y="1066" class="t-muted" font-size="8">return</text>
+          </g>
+          <g data-legend-semantic-kind="security" data-legend-x="235" data-legend-baseline="1066" data-legend-width="83">
+            <path d="M 235 1063 L 269 1063" class="a-security" stroke-width="1.4" marker-end="url(#arrowhead-security)"/>
+            <text x="278" y="1066" class="t-muted" font-size="8">security</text>
+          </g>
+          <g data-legend-semantic-kind="default" data-legend-x="340" data-legend-baseline="1066" data-legend-width="118">
+            <path d="M 340 1063 L 374 1063" class="a-default" stroke-width="1.4" marker-end="url(#arrowhead)"/>
+            <text x="383" y="1066" class="t-muted" font-size="8">default message</text>
+          </g>
+        </g>
       </svg>
       <p class="intent-trace-status no-print" id="intent-trace-status" role="status" aria-live="polite" aria-atomic="true"></p>
       <div class="share-chapter-cue no-print" id="share-chapter-cue" hidden role="status" aria-live="polite">
@@ -5093,6 +5103,7 @@
         <ul>
           <li>&bull; &quot;A couple of wobbles&quot; is a mention, not an answer</li>
           <li>&bull; M14 becomes partial — quote attached, item still open</li>
+          <li>&bull; A quote that is not in the transcript is dropped, never shown</li>
           <li>&bull; Every competitor ticks here; this is the whole product</li>
         </ul>
       </div>
@@ -5117,7 +5128,8 @@
         <ul>
           <li>&bull; 409 carries what is missing and whether a decline is permitted</li>
           <li>&bull; Ask now, record a decline, or let the agent escalate</li>
-          <li>&bull; The escalation is drafted and filed autonomously</li>
+          <li>&bull; Drafting is retried twice — a transient 429 must not cost the draft</li>
+          <li>&bull; The destination comes from a closed list; substitution is logged</li>
         </ul>
       </div>
     </div>
@@ -5606,6 +5618,7 @@
         });
         Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-kind]'), function (el) {
           el.removeAttribute('data-legend-kind');
+          el.removeAttribute('data-legend-label');
           el.removeAttribute('data-legend-count');
           el.removeAttribute('data-legend-zero');
           el.removeAttribute('data-legend-selected');
@@ -12564,7 +12577,8 @@
           }
           entry.setAttribute('role', 'button');
           entry.setAttribute('tabindex', legendEntries.length ? '-1' : '0');
-          entry.setAttribute('aria-label', 'Inspect ' + fact.label + ', ' + count + ' node' + (count === 1 ? '' : 's'));
+          var visibleLabel = entry.getAttribute('data-legend-label') || fact.label;
+          entry.setAttribute('aria-label', 'Inspect ' + visibleLabel + ', ' + count + ' node' + (count === 1 ? '' : 's'));
           entry.setAttribute('aria-pressed', 'false');
           entry.setAttribute('aria-haspopup', 'dialog');
           entry.setAttribute('aria-controls', 'semantic-lens');

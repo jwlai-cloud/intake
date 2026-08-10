@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "sequence",
   "meta": {
-    "title": "Intake — one chunk, and the gate at the end",
+    "title": "Intake \u2014 one chunk, and the gate at the end",
     "subtitle": "18 seconds of audio through the ADK turn pipeline, then the three-state gate refusing a report",
     "output": "intake-sequence.html",
     "quality_profile": "showcase",
@@ -52,7 +52,7 @@
       "id": "practitioner",
       "type": "external",
       "label": "Practitioner",
-      "sublabel": "browser · mic"
+      "sublabel": "browser \u00b7 mic"
     },
     {
       "id": "api",
@@ -122,7 +122,7 @@
     {
       "from": 814,
       "to": 998,
-      "label": "Finish — the gate refuses, then routes"
+      "label": "Finish \u2014 the gate refuses, then routes"
     }
   ],
   "messages": [
@@ -131,7 +131,7 @@
       "from": "practitioner",
       "to": "api",
       "y": 188,
-      "label": "POST 18s audio · seq 7",
+      "label": "POST 18s audio \u00b7 seq 7",
       "variant": "emphasis"
     },
     {
@@ -139,7 +139,7 @@
       "from": "api",
       "to": "firestore",
       "y": 226,
-      "label": "claim seq 7 — replay is a no-op",
+      "label": "claim seq 7 \u2014 replay is a no-op",
       "variant": "security"
     },
     {
@@ -155,7 +155,7 @@
       "from": "transcriber",
       "to": "vertex",
       "y": 352,
-      "label": "audio → speaker-attributed turns",
+      "label": "audio \u2192 speaker-attributed turns",
       "variant": "default"
     },
     {
@@ -187,7 +187,7 @@
       "from": "vertex",
       "to": "router",
       "y": 492,
-      "label": "M14, M06 — the other 13 are untouched",
+      "label": "M14, M06 \u2014 the other 13 are untouched",
       "variant": "return"
     },
     {
@@ -211,7 +211,7 @@
       "from": "vertex",
       "to": "adjudicator",
       "y": 596,
-      "label": "M14 insufficient — no count, no circumstances",
+      "label": "M14 insufficient \u2014 no count, no circumstances",
       "variant": "return"
     },
     {
@@ -219,7 +219,7 @@
       "from": "adjudicator",
       "to": "firestore",
       "y": 632,
-      "label": "M14 → partial, with the quote",
+      "label": "M14 \u2192 partial \u00b7 quote if verbatim",
       "variant": "emphasis"
     },
     {
@@ -235,7 +235,7 @@
       "from": "coach",
       "to": "vertex",
       "y": 708,
-      "label": "next question — never an answer",
+      "label": "next question \u2014 never an answer",
       "variant": "default"
     },
     {
@@ -251,7 +251,7 @@
       "from": "api",
       "to": "practitioner",
       "y": 780,
-      "label": "coverage 1/15 · M14 still open",
+      "label": "coverage 1/15 \u00b7 M14 still open",
       "variant": "return"
     },
     {
@@ -267,7 +267,7 @@
       "from": "api",
       "to": "practitioner",
       "y": 870,
-      "label": "409 — 3 items have no recorded answer",
+      "label": "409 \u2014 3 items have no recorded answer",
       "variant": "security"
     },
     {
@@ -283,7 +283,7 @@
       "from": "escalator",
       "to": "vertex",
       "y": 940,
-      "label": "draft the follow-up action",
+      "label": "draft the follow-up \u00b7 2 retries on 429",
       "variant": "default"
     },
     {
@@ -291,7 +291,7 @@
       "from": "escalator",
       "to": "firestore",
       "y": 974,
-      "label": "filed → Occupational therapy queue",
+      "label": "filed \u2192 Occupational therapy queue",
       "variant": "return"
     }
   ],
@@ -339,7 +339,8 @@
       "title": "The beat that matters",
       "items": [
         "\"A couple of wobbles\" is a mention, not an answer",
-        "M14 becomes partial — quote attached, item still open",
+        "M14 becomes partial \u2014 quote attached, item still open",
+        "A quote that is not in the transcript is dropped, never shown",
         "Every competitor ticks here; this is the whole product"
       ]
     },
@@ -358,7 +359,8 @@
       "items": [
         "409 carries what is missing and whether a decline is permitted",
         "Ask now, record a decline, or let the agent escalate",
-        "The escalation is drafted and filed autonomously"
+        "Drafting is retried twice \u2014 a transient 429 must not cost the draft",
+        "The destination comes from a closed list; substitution is logged"
       ]
     }
   ]

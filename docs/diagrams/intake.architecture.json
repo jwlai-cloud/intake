@@ -2,8 +2,8 @@
   "schema_version": 1,
   "diagram_type": "architecture",
   "meta": {
-    "title": "Intake — answer-level coverage for mandated interviews",
-    "subtitle": "One audio chunk in, one bounded turn out. Cloud Run · ADK 2.6.2 · Vertex AI · Firestore",
+    "title": "Intake \u2014 answer-level coverage for mandated interviews",
+    "subtitle": "One audio chunk in, one bounded turn out. Cloud Run \u00b7 ADK 2.6.2 \u00b7 Vertex AI \u00b7 Firestore",
     "output": "intake-architecture.html",
     "quality_profile": "showcase",
     "viewBox": [
@@ -63,8 +63,8 @@
       "id": "practitioner",
       "type": "external",
       "label": "Practitioner",
-      "sublabel": "React web · iOS later",
-      "tag": "mic → 18s chunks",
+      "sublabel": "React web \u00b7 iOS later",
+      "tag": "mic \u2192 18s chunks",
       "pos": [
         60,
         336
@@ -78,8 +78,8 @@
       "id": "api",
       "type": "backend",
       "label": "FastAPI",
-      "sublabel": "Cloud Run · max 2 inst.",
-      "tag": "chunks · resolve · report",
+      "sublabel": "Cloud Run \u00b7 max 2 inst.",
+      "tag": "chunks \u00b7 resolve \u00b7 report",
       "pos": [
         340,
         336
@@ -136,7 +136,7 @@
       "id": "coach",
       "type": "backend",
       "label": "Coach",
-      "sublabel": "next question · quotes",
+      "sublabel": "next question \u00b7 quotes",
       "pos": [
         1530,
         344
@@ -150,7 +150,7 @@
       "id": "vertex",
       "type": "cloud",
       "label": "Vertex AI",
-      "sublabel": "gemini-3.6-flash · schema-constrained",
+      "sublabel": "gemini-3.6-flash \u00b7 schema-constrained",
       "tag": "temperature 0",
       "pos": [
         950,
@@ -166,7 +166,7 @@
       "type": "database",
       "label": "Firestore",
       "sublabel": "slot state, not transcript",
-      "tag": "native · intake",
+      "tag": "native \u00b7 intake",
       "pos": [
         640,
         556
@@ -180,7 +180,7 @@
       "id": "templates",
       "type": "external",
       "label": "Template config",
-      "sublabel": "nursing · loss adjusting",
+      "sublabel": "nursing \u00b7 loss adjusting",
       "tag": "zero domain logic in code",
       "pos": [
         340,
@@ -195,7 +195,7 @@
       "id": "gate",
       "type": "security",
       "label": "Three-state gate",
-      "sublabel": "answered · declined · escalated",
+      "sublabel": "answered \u00b7 declined \u00b7 escalated",
       "tag": "409 until resolved",
       "pos": [
         1810,
@@ -218,7 +218,8 @@
       "size": [
         170,
         72
-      ]
+      ],
+      "tag": "retried, then filed"
     },
     {
       "id": "report",
@@ -239,7 +240,7 @@
   "boundaries": [
     {
       "kind": "region",
-      "label": "Google Cloud · agent-era · us-central1",
+      "label": "Google Cloud \u00b7 agent-era \u00b7 us-central1",
       "wraps": [
         "api",
         "transcriber",
@@ -255,7 +256,7 @@
     },
     {
       "kind": "security-group",
-      "label": "X-Intake-Key · 20 req/min per key · fails closed",
+      "label": "X-Intake-Key \u00b7 20 req/min per key \u00b7 fails closed",
       "wraps": [
         "api"
       ]
@@ -394,9 +395,10 @@
       "dot": "amber",
       "title": "Measured, not assumed",
       "items": [
-        "47 labelled cases · 46/47 · precision on sufficient 100%",
-        "Behavioural eval over the pipeline scores 5/5",
-        "66 backend tests, no network"
+        "47 labelled cases \u00b7 46/47 \u00b7 precision on sufficient 100%",
+        "Behavioural eval over the pipeline: 6 cases, 18/18 metrics at 1.00",
+        "Every eval metric is deterministic code \u2014 no LLM judge, no judge bill",
+        "101 backend tests, no network"
       ]
     },
     {
@@ -405,7 +407,8 @@
       "items": [
         "Failed chunk POSTs queue locally and replay in order",
         "A replayed sequence number is a no-op",
-        "One item's failure leaves it open; its neighbours still land"
+        "One item's failure leaves it open; its neighbours still land",
+        "/health reports 503 if the session store silently degraded to memory"
       ]
     }
   ]
