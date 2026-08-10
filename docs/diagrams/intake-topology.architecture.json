@@ -1,0 +1,334 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Intake \u2014 runtime topology",
+    "subtitle": "One audio chunk, one bounded ADK turn \u2014 Cloud Run, Gemini 3.6 Flash on Vertex AI, Firestore",
+    "output": "intake-topology.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "chunk-path",
+        "label": "The chunk path",
+        "focus": [
+          "browser",
+          "api",
+          "turnrunner",
+          "pipeline",
+          "vertex",
+          "firestore"
+        ],
+        "note": "A 15-20s audio chunk enters, four Gemini calls run, and the slot state is written to Firestore."
+      },
+      {
+        "id": "two-stores",
+        "label": "Two kinds of state",
+        "focus": [
+          "turnrunner",
+          "adksession",
+          "pipeline",
+          "firestore"
+        ],
+        "note": "ADK's session service holds one turn of scratch. Durable domain state is ours, so an instance can die mid-interview and cost nothing."
+      },
+      {
+        "id": "tooling",
+        "label": "The second entrypoint",
+        "focus": [
+          "evaltools",
+          "rootagent",
+          "pipeline"
+        ],
+        "note": "ADK tooling discovers a module-level root_agent wired to an in-memory store, so evaluation can never write to the interview database."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "browser",
+      "type": "frontend",
+      "label": "Browser",
+      "sublabel": "MediaRecorder",
+      "tag": "15-20s chunks",
+      "pos": [
+        40,
+        340
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "secrets",
+      "type": "security",
+      "label": "Secret Manager",
+      "sublabel": "INTAKE_API_KEY",
+      "pos": [
+        40,
+        150
+      ],
+      "size": [
+        150,
+        64
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "FastAPI",
+      "sublabel": "main.py",
+      "tag": "key gate + rate limit",
+      "pos": [
+        300,
+        340
+      ],
+      "size": [
+        160,
+        68
+      ]
+    },
+    {
+      "id": "adksession",
+      "type": "database",
+      "label": "InMemorySessionService",
+      "sublabel": "ADK scratch, one turn",
+      "pos": [
+        620,
+        150
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "turnrunner",
+      "type": "backend",
+      "label": "TurnRunner",
+      "sublabel": "ADK Runner",
+      "tag": "app_name=intake",
+      "pos": [
+        620,
+        340
+      ],
+      "size": [
+        160,
+        68
+      ]
+    },
+    {
+      "id": "pipeline",
+      "type": "backend",
+      "label": "TurnPipeline",
+      "sublabel": "custom BaseAgent",
+      "tag": "transcribe - route - adjudicate - coach",
+      "pos": [
+        880,
+        340
+      ],
+      "size": [
+        190,
+        68
+      ]
+    },
+    {
+      "id": "escalator",
+      "type": "backend",
+      "label": "Escalator",
+      "sublabel": "second ADK Runner",
+      "tag": "draft + 2 retries",
+      "pos": [
+        620,
+        550
+      ],
+      "size": [
+        160,
+        68
+      ]
+    },
+    {
+      "id": "vertex",
+      "type": "cloud",
+      "label": "Vertex AI",
+      "sublabel": "gemini-3.6-flash",
+      "pos": [
+        1170,
+        160
+      ],
+      "size": [
+        170,
+        68
+      ]
+    },
+    {
+      "id": "firestore",
+      "type": "database",
+      "label": "Firestore",
+      "sublabel": "slots, durable",
+      "tag": "one doc per session",
+      "pos": [
+        1170,
+        490
+      ],
+      "size": [
+        170,
+        68
+      ]
+    },
+    {
+      "id": "evaltools",
+      "type": "external",
+      "label": "ADK tooling",
+      "sublabel": "api_server, agents-cli eval",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "rootagent",
+      "type": "backend",
+      "label": "adk_apps/intake",
+      "sublabel": "module-level root_agent",
+      "tag": "in-memory store",
+      "pos": [
+        350,
+        40
+      ],
+      "size": [
+        190,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Cloud Run - us-central1 - max-instances 2",
+      "wraps": [
+        "api",
+        "turnrunner",
+        "adksession",
+        "pipeline",
+        "escalator"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "chunk-post",
+      "from": "browser",
+      "to": "api",
+      "label": "POST /chunk",
+      "variant": "emphasis",
+      "labelDy": -40
+    },
+    {
+      "id": "key-check",
+      "from": "secrets",
+      "to": "api",
+      "label": "compare_digest",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "top"
+    },
+    {
+      "id": "run-turn",
+      "from": "api",
+      "to": "turnrunner",
+      "label": "run_turn"
+    },
+    {
+      "id": "run-async",
+      "from": "turnrunner",
+      "to": "pipeline",
+      "label": "run_async",
+      "variant": "emphasis",
+      "labelDy": -46
+    },
+    {
+      "id": "scratch-state",
+      "from": "turnrunner",
+      "to": "adksession",
+      "label": "state_delta",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "gemini-calls",
+      "from": "pipeline",
+      "to": "vertex",
+      "label": "4 calls per turn",
+      "variant": "emphasis"
+    },
+    {
+      "id": "write-slots",
+      "from": "pipeline",
+      "to": "firestore",
+      "label": "apply_verdict",
+      "variant": "emphasis"
+    },
+    {
+      "id": "escalate",
+      "from": "api",
+      "to": "escalator",
+      "label": "resolve escalated"
+    },
+    {
+      "id": "file-followup",
+      "from": "escalator",
+      "to": "firestore",
+      "label": "file follow-up"
+    },
+    {
+      "id": "tooling-discovers",
+      "from": "evaltools",
+      "to": "rootagent",
+      "label": "discovers",
+      "variant": "dashed"
+    },
+    {
+      "id": "same-classes",
+      "from": "rootagent",
+      "to": "pipeline",
+      "label": "same agent classes",
+      "variant": "dashed",
+      "labelDy": 46
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Bounded by design",
+      "items": [
+        "Chunked HTTP, not bidirectional streaming",
+        "Each call sees open items only, never the transcript",
+        "A three-hour interview costs the same per chunk as a ten-minute one"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Two runners, two stores",
+      "items": [
+        "An ADK agent may have exactly one parent, so stages are factories",
+        "ADK session state is scratch, discarded after each turn",
+        "Slot state is ours in Firestore and survives an instance recycling"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Evaluation cannot touch production",
+      "items": [
+        "ADK tooling discovers root_agent, not the service pipeline",
+        "That entrypoint is wired to an in-memory store",
+        "api_server serves apps by directory name, not by path"
+      ]
+    }
+  ]
+}
