@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="generator" content="archify 2.12.0">
+  <meta name="generator" content="archify 2.13.0">
   <title>ADK orchestration — inside one turn Diagram</title>
   <script>
     // Resolve the theme before first paint so light-preference users don't
@@ -4657,28 +4657,16 @@
 
 
         <!-- Legend -->
-        <g data-legend-bridge>
-          <text x="175" y="304" class="t-primary" font-size="10" font-weight="600">Legend</text>
-        <g data-legend-kind="frontend">
-          <rect x="175" y="316" width="14" height="9" rx="2" class="c-frontend" stroke-width="1"/>
-          <text x="195" y="324" class="t-muted" font-size="7">User UI</text>
-        </g>
-        <g data-legend-kind="backend">
-          <rect x="260" y="316" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
-          <text x="280" y="324" class="t-muted" font-size="7">Agent logic</text>
-        </g>
-        <g data-legend-kind="security">
-          <rect x="370" y="316" width="14" height="9" rx="2" class="c-security" stroke-width="1"/>
-          <text x="390" y="324" class="t-muted" font-size="7">Policy</text>
-        </g>
-        <g data-legend-kind="messagebus">
-          <rect x="455" y="316" width="14" height="9" rx="2" class="c-messagebus" stroke-width="1"/>
-          <text x="475" y="324" class="t-muted" font-size="7">Tool action</text>
-        </g>
-        <g data-legend-kind="database">
-          <rect x="565" y="316" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
-          <text x="585" y="324" class="t-muted" font-size="7">Context / trace</text>
-        </g>
+        <g data-legend data-legend-bridge>
+          <text x="20" y="304" class="t-primary" font-size="10" font-weight="600">Legend</text>
+          <g data-legend-semantic-kind="backend" data-legend-kind="backend" data-legend-label="Agent logic" data-legend-x="20" data-legend-baseline="324" data-legend-width="90">
+            <rect x="20" y="316" width="14" height="9" rx="2" class="c-backend" stroke-width="1"/>
+            <text x="41" y="324" class="t-muted" font-size="7">Agent logic</text>
+          </g>
+          <g data-legend-semantic-kind="database" data-legend-kind="database" data-legend-label="Context / trace" data-legend-x="117" data-legend-baseline="324" data-legend-width="108">
+            <rect x="117" y="316" width="14" height="9" rx="2" class="c-database" stroke-width="1"/>
+            <text x="138" y="324" class="t-muted" font-size="7">Context / trace</text>
+          </g>
         </g>
       </svg>
       <p class="intent-trace-status no-print" id="intent-trace-status" role="status" aria-live="polite" aria-atomic="true"></p>
@@ -4896,9 +4884,9 @@
         </div>
         <ul>
           <li>&bull; The coach&#39;s output schema has no field an answer could go in (ADR-0006)</li>
+          <li>&bull; Every displayed quote is checked against the transcript; an unverifiable span is dropped, not shown</li>
           <li>&bull; Highlight and next-question ids are checked against real state</li>
-          <li>&bull; Escalation destinations come from a closed list</li>
-          <li>&bull; Model output never indexes or creates state</li>
+          <li>&bull; Escalation destinations come from a closed list, and substitution warns</li>
         </ul>
       </div>
 
@@ -4909,8 +4897,8 @@
         </div>
         <ul>
           <li>&bull; SequentialAgent emits a content-less event, which agents-cli eval rejects — so we own the sequencing (ADR-0010)</li>
-          <li>&bull; before_agent_callback does the same; state is set inline instead</li>
-          <li>&bull; An ADK agent may have exactly one parent, so stages come from factories</li>
+          <li>&bull; The Workflow graph emits Event(output=..., content=None) and fails identically — measured, so the migration stays rejected (ADR-0013)</li>
+          <li>&bull; ADR-0008 read that deprecation warning backwards: a Workflow cannot nest inside an LlmAgent, not the reverse</li>
           <li>&bull; GOOGLE_GENAI_USE_VERTEXAI=TRUE, or ADK builds an AI Studio client and dies</li>
         </ul>
       </div>
@@ -5400,6 +5388,7 @@
         });
         Array.prototype.forEach.call(clone.querySelectorAll('[data-legend-kind]'), function (el) {
           el.removeAttribute('data-legend-kind');
+          el.removeAttribute('data-legend-label');
           el.removeAttribute('data-legend-count');
           el.removeAttribute('data-legend-zero');
           el.removeAttribute('data-legend-selected');
@@ -12358,7 +12347,8 @@
           }
           entry.setAttribute('role', 'button');
           entry.setAttribute('tabindex', legendEntries.length ? '-1' : '0');
-          entry.setAttribute('aria-label', 'Inspect ' + fact.label + ', ' + count + ' node' + (count === 1 ? '' : 's'));
+          var visibleLabel = entry.getAttribute('data-legend-label') || fact.label;
+          entry.setAttribute('aria-label', 'Inspect ' + visibleLabel + ', ' + count + ' node' + (count === 1 ? '' : 's'));
           entry.setAttribute('aria-pressed', 'false');
           entry.setAttribute('aria-haspopup', 'dialog');
           entry.setAttribute('aria-controls', 'semantic-lens');

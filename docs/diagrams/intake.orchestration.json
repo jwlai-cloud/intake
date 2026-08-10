@@ -2,7 +2,7 @@
   "schema_version": 1,
   "diagram_type": "workflow",
   "meta": {
-    "title": "ADK orchestration — inside one turn",
+    "title": "ADK orchestration \u2014 inside one turn",
     "subtitle": "TurnPipeline, a custom BaseAgent: what is an LlmAgent, what is ours, and where each Vertex call happens",
     "output": "intake-orchestration.html",
     "quality_profile": "showcase",
@@ -49,7 +49,7 @@
     },
     {
       "id": "p2",
-      "label": "Adjudicate — our code",
+      "label": "Adjudicate \u2014 our code",
       "fromCol": 2,
       "toCol": 3,
       "variant": "emphasis"
@@ -133,9 +133,9 @@
       "dot": "emerald",
       "title": "Why the middle stage is not an LlmAgent",
       "items": [
-        "Isolation — a wrong verdict on M14 cannot corrupt M06",
-        "Measurability — each item is a separately scoreable eval case",
-        "Latency — k concurrent calls cost about one call's wall time",
+        "Isolation \u2014 a wrong verdict on M14 cannot corrupt M06",
+        "Measurability \u2014 each item is a separately scoreable eval case",
+        "Latency \u2014 k concurrent calls cost about one call's wall time",
         "Routing first cut items touched by one chunk from 7 to 2"
       ]
     },
@@ -143,8 +143,8 @@
       "dot": "cyan",
       "title": "Two kinds of state, deliberately",
       "items": [
-        "ADK session state is scratch — it lives for one turn",
-        "Firestore is durable — an instance recycling costs nothing (ADR-0004)",
+        "ADK session state is scratch \u2014 it lives for one turn",
+        "Firestore is durable \u2014 an instance recycling costs nothing (ADR-0004)",
         "The coach reads a brief of open items, never a transcript (ADR-0002)",
         "Adjudication reads a rolling window of 12 turns, so an answer can span two chunks"
       ]
@@ -154,18 +154,18 @@
       "title": "Guardrails that are types, not instructions",
       "items": [
         "The coach's output schema has no field an answer could go in (ADR-0006)",
+        "Every displayed quote is checked against the transcript; an unverifiable span is dropped, not shown",
         "Highlight and next-question ids are checked against real state",
-        "Escalation destinations come from a closed list",
-        "Model output never indexes or creates state"
+        "Escalation destinations come from a closed list, and substitution warns"
       ]
     },
     {
       "dot": "rose",
       "title": "Learned the hard way",
       "items": [
-        "SequentialAgent emits a content-less event, which agents-cli eval rejects — so we own the sequencing (ADR-0010)",
-        "before_agent_callback does the same; state is set inline instead",
-        "An ADK agent may have exactly one parent, so stages come from factories",
+        "SequentialAgent emits a content-less event, which agents-cli eval rejects \u2014 so we own the sequencing (ADR-0010)",
+        "The Workflow graph emits Event(output=..., content=None) and fails identically \u2014 measured, so the migration stays rejected (ADR-0013)",
+        "ADR-0008 read that deprecation warning backwards: a Workflow cannot nest inside an LlmAgent, not the reverse",
         "GOOGLE_GENAI_USE_VERTEXAI=TRUE, or ADK builds an AI Studio client and dies"
       ]
     }
