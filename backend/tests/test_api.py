@@ -310,3 +310,60 @@ def test_health_is_ok_locally_with_no_project_set(client, monkeypatch):
     monkeypatch.delenv("INTAKE_STORE", raising=False)
     c, _ = client
     assert c.get("/health").status_code == 200
+
+
+# --- OWASP hardening ---------------------------------------------------------
+
+def test_security_headers_are_present_on_every_response(client):
+    c, _ = client
+    h = c.get("/health").headers
+    assert h["X-Frame-Options"] == "DENY", "an interview screen must not be frameable"
+    assert h["X-Content-Type-Options"] == "nosniff"
+    assert h["Referrer-Policy"] == "no-referrer", \
+        "the session id is in the URL; it must not leak to third parties"
+    assert "max-age=" in h["Strict-Transport-Security"]
+    assert "frame-ancestors 'none'" in h["Content-Security-Policy"]
+
+
+@pytest.mark.parametrize("bad", [
+    "../../etc/passwd",
+    "..",
+    ".",
+    "__probe__",              # a Firestore-reserved id shape
+    "abc/def",                # would change the document path
+    "nothex" + "0" * 26,
+    "0" * 31,                 # right alphabet, wrong length
+    "0" * 33,
+    "",
+])
+def test_the_validator_rejects_anything_that_is_not_a_uuid4_hex(bad):
+    """Unit-level, because the traversal shapes never reach the handler: the
+    HTTP layer normalises `.` and `..` out of the path first. That is a second
+    line of defence, not the one being tested here — this is the line that
+    still holds if the id ever arrives from somewhere other than a URL."""
+    from fastapi import HTTPException
+    with pytest.raises(HTTPException) as e:
+        main.valid_session_id(bad)
+    assert e.value.status_code == 404
+
+
+@pytest.mark.parametrize("bad", [
+    "__probe__",
+    "nothex" + "0" * 26,
+    "0" * 31,
+    "0" * 33,
+])
+def test_a_malformed_session_id_is_rejected_as_a_miss(client, bad):
+    """404, not 400 — a malformed id must not be distinguishable from an id
+    that simply does not exist, or the endpoint becomes an oracle."""
+    c, _ = client
+    r = c.get(f"/sessions/{bad}")
+    assert r.status_code == 404
+    assert r.json()["detail"] == "no such session"
+
+
+def test_a_missing_session_does_not_echo_the_id_back(client):
+    c, _ = client
+    r = c.get("/sessions/" + "a" * 32)
+    assert r.status_code == 404
+    assert "a" * 32 not in r.text, "reflecting the caller's input is a free oracle"

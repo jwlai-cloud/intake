@@ -1,0 +1,35 @@
+# OWASP A03 — software supply chain.
+#
+# Dependencies are pinned (backend/requirements.txt is generated from a resolved
+# environment, not hand-written), but a pin only fixes *which* version ships. It
+# says nothing about whether that version has since been found vulnerable. This
+# is the part that notices.
+name: security
+
+on:
+  push:
+    branches: [master, dev]
+  pull_request:
+  schedule:
+    # A pinned dependency does not change, but the advisory database does. The
+    # weekly run is what turns "we pinned it" into "we still know it is safe".
+    - cron: "0 6 * * 1"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: pip-audit the pinned dependencies
+        run: uvx pip-audit -r backend/requirements.txt --strict --progress-spinner=off
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Backend suite
+        # No network and no credentials: every model call is stubbed, which is
+        # what lets this run on a pull request from a fork.
+        run: cd backend && uv run --with pytest --with pytest-asyncio --with pyyaml pytest -q

@@ -12,13 +12,16 @@ import base64
 import hashlib
 import logging
 import os
+import re
 import secrets
 import threading
 import time
+import uuid
 from collections import defaultdict, deque
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import tracing
@@ -134,11 +137,79 @@ def _rate_limit(key: str) -> None:
         bucket.append(now)
 
 
+# --- OWASP A02: security misconfiguration ------------------------------------
+
+# Cloud Run terminates TLS and adds none of these. They are cheap, and two of
+# them matter here specifically: an interview screen showing verbatim patient
+# speech must not be frameable by another origin, and the session id lives in
+# the URL, so it must not leak to third parties through a Referer header.
+SECURITY_HEADERS = {
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    # The API serves JSON only; nothing should ever be loaded or framed from it.
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+}
+
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    for header, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(header, value)
+    return response
+
+
+# --- OWASP A01/A05: the session id is a path segment and a document id -------
+
+# uuid4().hex, and nothing else. Firestore reserves ids matching `__…__`, treats
+# `.` and `..` specially, and a document id is interpolated straight into a
+# collection path — so the id is validated at the edge rather than trusted
+# because it "came from us". It never did: it comes from the URL.
+_SESSION_ID = re.compile(r"^[0-9a-f]{32}$")
+
+
+def valid_session_id(session_id: str) -> str:
+    if not _SESSION_ID.fullmatch(session_id):
+        # Same shape as a genuine miss: a malformed id must not be
+        # distinguishable from an id that simply does not exist.
+        raise HTTPException(status_code=404, detail="no such session")
+    return session_id
+
+
 def get_session(session_id: str):
+    valid_session_id(session_id)
     try:
         return _store.get(session_id)
     except KeyError:
-        raise HTTPException(status_code=404, detail=f"no session {session_id}") from None
+        raise HTTPException(status_code=404, detail="no such session") from None
+
+
+# --- OWASP A10: exceptional conditions ---------------------------------------
+
+
+@app.exception_handler(Exception)
+async def unhandled(request, exc: Exception):
+    """Generic to the caller, traceable in the logs.
+
+    An unhandled error must never describe itself to the internet: a stack
+    frame, a Firestore path or a Vertex message is a map of the system. But
+    "something went wrong" with nothing to grep for is equally useless to the
+    practitioner on the phone, so both sides get the same short reference.
+
+    Only the exception *type* is logged, never its text. A Vertex error echoes
+    the request that caused it, and this request body is interviewee speech
+    (ADR-0007) — Cloud Logging outlives the session document.
+    """
+    ref = uuid.uuid4().hex[:12]
+    log.error("unhandled error · ref=%s · %s %s · %s",
+              ref, request.method, request.url.path, type(exc).__name__)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "internal error", "reference": ref},
+        headers=SECURITY_HEADERS,
+    )
 
 
 # --- payloads ----------------------------------------------------------------
