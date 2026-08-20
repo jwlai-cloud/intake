@@ -89,11 +89,14 @@ interviewed — that would break the privacy guarantee that makes this deployabl
 
 ## Checklist
 
-- [x] Public repo, opens in incognito
+- [x] Public repo, opens in incognito — **master was stuck on the scaffold commit until 20 Aug; 52 commits were unpushed**
 - [x] Architecture diagram as an uploadable image — `docs/diagrams/intake-architecture.png`
 - [x] README spin-up + reviewer instructions
 - [x] Known limitations documented
-- [ ] Redeploy Cloud Run from current `master`
+- [ ] Redeploy Cloud Run from current `master` — **blocked**: `gcloud` is denied
+      `run.services.get` on `agent-era` for both accounts, though the running
+      service and Vertex both work. Fix with `gcloud auth login` as the project
+      owner, then `GOOGLE_CLOUD_PROJECT=agent-era ./backend/deploy.sh`
 - [ ] Re-render the demo video (narration now names Gemini 3.6 Flash aloud)
 - [ ] Upload video to YouTube **public**, in English — allow hours for processing
 - [ ] Submission form drafted and saved
