@@ -40,9 +40,10 @@ answered.
 
 [[architecture]]
 narrator = """
-Every chunk runs one turn of a Google A-D-K pipeline on Cloud Run, and state
-lives in Firestore as one slot per required item — never the transcript. A
-three-hour interview costs the same per chunk as a ten-minute one.
+Every chunk runs one turn of a Google A-D-K pipeline on Cloud Run, calling
+Gemini three point six Flash on Vertex A-I. State lives in Firestore as one
+slot per required item — never the transcript. A three-hour interview costs
+the same per chunk as a ten-minute one.
 """
 
 # --- the interview ----------------------------------------------------------

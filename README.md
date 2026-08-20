@@ -14,6 +14,40 @@ item before producing the report.
 > Every AI scribe tells you what you said. Intake tells you what you haven't
 > asked yet.
 
+---
+
+## For reviewers and judges
+
+**Hosted:** https://intake-agent-320877670799.us-central1.run.app
+
+It scales to zero, so the *first* request after an idle period takes ~15s to
+cold-start and any request before that may time out. Hit `/health` once and wait
+for `{"ok":true,"store":"FirestoreStore"}` before trying the UI.
+
+The API is gated by a shared key sent as an `X-Intake-Key` header — an open
+endpoint is an open wallet, since every request spends Vertex AI credit. The key
+for reviewers is in the Devpost submission's testing-instructions field, not in
+this repo. Paste it into the web client when prompted, or:
+
+```bash
+curl -s https://intake-agent-320877670799.us-central1.run.app/health
+curl -s -H "X-Intake-Key: <key from the submission form>" \
+     -H "Content-Type: application/json" \
+     -d '{"template_id":"community-nursing-v1","practitioner_id":"reviewer"}' \
+     https://intake-agent-320877670799.us-central1.run.app/sessions
+```
+
+`practitioner_id` is a free-text label, not a login — it scopes the session and
+is the ADK `user_id`. Any value works.
+
+**Nothing to install to evaluate the core claim.** The product's whole argument
+is the adjudicator, and it is scoreable in one command against 47 labelled cases
+— see *Verify the adjudicator before anything else* below.
+
+**Model and framework, stated plainly:** Gemini **3.6 Flash** via **Vertex AI**,
+orchestrated with **Google ADK 2.6.2 (Python)**, on **Cloud Run** with
+**Firestore** and **Secret Manager**.
+
 ## The distinction that matters
 
 Existing tools tick an item when it is **mentioned**. Intake ticks when it is
@@ -40,20 +74,29 @@ never lets an omission pass silently.
 
 ## Architecture
 
+![Intake architecture](docs/diagrams/intake-architecture.png)
+
 ```
 React (browser)                       Google Cloud
 ┌───────────────────────┐            ┌──────────────────────────────────────┐
-│ mic → 18s chunks      │──POST────▶ │ Cloud Run · FastAPI + ADK Python     │
-│ local queue + replay  │            │  SequentialAgent "intake_turn"       │
+│ mic → 18s chunks      │──POST────▶ │ Cloud Run · FastAPI + ADK 2.6.2      │
+│ local queue + replay  │            │  TurnPipeline — custom BaseAgent     │
 │                       │            │   1. transcriber   LlmAgent          │
-│ coverage ring         │            │   2. adjudication  custom BaseAgent  │
-│ next-question card    │            │      └─ one call per open item,      │
-│ highlight chips       │            │         fanned out concurrently      │
-│ three-state gate      │            │   3. coach         LlmAgent          │
-│ report editor         │◀───────────│ Vertex AI gemini-3.6-flash           │
-└───────────────────────┘            │ Firestore (session state)            │
+│ coverage ring         │            │   2. route         narrows the set   │
+│ next-question card    │            │   3. adjudication  custom BaseAgent  │
+│ highlight chips       │            │      └─ one call per open item,      │
+│ three-state gate      │            │         fanned out concurrently      │
+│ report editor         │◀───────────│   4. coach         LlmAgent          │
+└───────────────────────┘            │ Vertex AI gemini-3.6-flash           │
+                                     │ Firestore · Secret Manager           │
                                      └──────────────────────────────────────┘
 ```
+
+Not a `SequentialAgent`, and not the `Workflow` graph. Both emit events with no
+`content`, which ADK's own eval tooling rejects outright — so behavioural
+evaluation is impossible on either. A custom `BaseAgent` is four lines and every
+event in the trace is one we deliberately emitted. Measured, with the event
+streams, in [ADR-0013](docs/adr/0013-no-workflow-graph-migration.md).
 
 Each chunk costs one transcription call, one adjudication call **per still-open
 item** run concurrently, and one coaching call. Adjudication is fanned out
@@ -220,6 +263,40 @@ that *"this may indicate falls risk"*. It does not diagnose, rank, recommend,
 or imply a clinical or professional next action. For items marked `high_risk`
 it offers no suggested answer at all: it shows the quote and the human writes
 the answer.
+
+## Known limitations
+
+Stated here rather than left to be found. Each is a decision with a reason, not
+an oversight.
+
+**Access control is a capability model, not per-user auth.** One shared API key
+gates the service, and a session is addressed by an unguessable 128-bit id. Any
+key holder who *has* an id can act on that session. Nobody can enumerate ids,
+but the model stops being defensible the moment one reaches a log, a referrer,
+or a shared screen. The fix is Firebase Auth plus an owner field on the session
+document — designed in [ADR-0012](docs/adr/0012-firebase-auth-not-a-shared-secret.md),
+deliberately not attempted in the last fortnight before a deadline.
+
+**Concurrent writes to one session can lose an update.** Firestore writes are
+read-modify-write without a transaction, so two chunks landing at once means
+last-writer-wins. The browser serialises chunk POSTs, so it does not happen in
+normal use, and the replay guard makes a duplicate chunk a no-op — but the guard
+is itself read-modify-write, so it is not airtight either. The fix is a
+transactional `_mutate` on the store.
+
+**Rate limiting is per instance.** 20 requests/minute per key, held in process,
+so with `--max-instances=2` the real ceiling is 40 and it resets on a cold
+start. Adequate while there is one key; a Firestore counter when there are real
+users.
+
+**Cloud Trace is wired and disabled.** The exporter is configured and no span
+was ever observed arriving. Shipped off rather than as a flag that lies about
+what it does.
+
+**Practitioner memory is designed, not built.** The session schema documents
+`practitioners/{id}` with dismissed categories, phrasing notes and report voice.
+Nothing reads or writes it yet. It is the honest next feature, and it would
+learn about the *practitioner* — never about the people being interviewed.
 
 ## Licence
 
