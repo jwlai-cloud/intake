@@ -106,6 +106,36 @@ Also observed while testing: the failed attempts of a retried node emit
 `Event(output=None, content=None)`. So even this graph would have been
 un-evaluable, which only did not matter because escalation is not evaluated.
 
+## The case against this decision
+
+Recorded because it is a real one, and this ADR is weaker without it.
+
+**ADK's own taxonomy points the other way.** The framework positions `Workflow`
+as the tool for *deterministic* pipelines and a custom `BaseAgent` as the escape
+hatch for orchestration it cannot express; the collaboration guide draws the
+same line, with graphs on the deterministic side and agent teams on the
+autonomous side. Intake's turn is a fixed order — transcribe, route, adjudicate,
+coach. By the framework's intended mapping **this is graph-shaped, and reaching
+for `BaseAgent` is reaching for the general tool.**
+
+That objection is correct on the taxonomy. What overrides it is a measurement,
+not a preference: the graph cannot be evaluated with ADK's own eval CLI, and
+evaluation is what makes this product's central claim checkable rather than
+asserted. A tooling constraint beating a design guideline is a reason to record
+the deviation, not to pretend the guideline does not apply.
+
+The one place the taxonomy genuinely does not fit: adjudication is not a plain
+step. It fans out to *k* concurrent calls where k is discovered at runtime by
+the router, and one item failing must leave that item open without disturbing
+its neighbours. `@node(parallel_worker=True)` does handle dynamic lists, so this
+is a complication rather than a blocker — it would mean rebuilding the per-item
+isolation inside a node.
+
+**If the eval incompatibility is fixed, the taxonomy should win and this
+decision should be revisited.** Three linear stages plus one dynamic fan-out is
+a graph with one custom node, and that is a better description of the system
+than four hand-forwarded stages.
+
 ## What would make this wrong
 
 - ADK giving graph nodes a default `content`, or `agents-cli eval` tolerating
