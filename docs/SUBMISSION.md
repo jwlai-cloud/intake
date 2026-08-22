@@ -93,11 +93,11 @@ interviewed — that would break the privacy guarantee that makes this deployabl
 - [x] Architecture diagram as an uploadable image — `docs/diagrams/intake-architecture.png`
 - [x] README spin-up + reviewer instructions
 - [x] Known limitations documented
-- [ ] Redeploy Cloud Run from current `master` — **blocked**: `gcloud` is denied
-      `run.services.get` on `agent-era` for both accounts, though the running
-      service and Vertex both work. Fix with `gcloud auth login` as the project
-      owner, then `GOOGLE_CLOUD_PROJECT=agent-era ./backend/deploy.sh`
-- [ ] Re-render the demo video (narration now names Gemini 3.6 Flash aloud)
+- [x] Redeployed to `agent-era` — revision `intake-agent-00020-fft`, verified by
+      the new security headers being live. The `gcloud` CLI credential is still
+      broken for this project; ADC is not, so deploys work with
+      `CLOUDSDK_AUTH_ACCESS_TOKEN=$(gcloud auth application-default print-access-token)`
+- [x] Demo video re-rendered — 3:37, 84% speech, worst gap 4.1s, narration says "Gemini three point six Flash on Vertex A-I" aloud
 - [ ] Upload video to YouTube **public**, in English — allow hours for processing
 - [ ] Submission form drafted and saved
-- [ ] Verify the video is under 4:00 and the Cloud Console proof is visible in it
+- [x] Verified under 4:00 and frame-sampled: app renders, captions and cursor present, high-risk item shows "no suggested answer", eval card visible

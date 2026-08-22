@@ -58,7 +58,11 @@ working = """
 That chunk is on Cloud Run now. Transcribe, route, then one Gemini call per
 open item — fourteen items, narrowed to the two this chunk is about.
 """
-why = "This is the moment the whole product exists for."
+why = """
+This is the moment the whole product exists for. Every competitor ticks the box
+right here, because the topic was raised. Intake is asking a different question
+— did the guidance actually get satisfied?
+"""
 verdict = "Mentioned, not answered. It lists what is still missing."
 
 [[turns]]
@@ -74,7 +78,10 @@ working = """
 The guidance asks for two things: a number, and the circumstances of the most
 recent fall. It checks against that note, not its own idea of a good answer.
 """
-why = "A count, and the circumstances. Both of them, this time."
+why = """
+A count, and the circumstances. Both of them, this time. The adjudicator checks
+against the form's own guidance note, not against its own idea of a good answer.
+"""
 verdict = "Now it counts. And a new required item has just appeared."
 
 [[turns]]
@@ -87,7 +94,11 @@ working = """
 The form marks which items may be declined. Alcohol intake is one. Falls is
 not.
 """
-why = "The form permits a decline here. It does not on falls."
+why = """
+The form permits a decline here. It does not on falls. That distinction lives in
+the template, not in the code — which is how a second profession runs on the
+same engine with nothing recompiled.
+"""
 verdict = "Declined is a real resolution, not a blank."
 
 # --- over the live Cloud Run logs -------------------------------------------

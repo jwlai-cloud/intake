@@ -297,8 +297,15 @@ async def main() -> None:
         await ctx.add_init_script(path=str(ROOT / "overlay.js"))
         # Seed the code before first paint so the access-code screen never
         # appears in the recording.
+        #
+        # localStorage, not sessionStorage. The client moved to localStorage so
+        # a refresh would stop re-prompting (api.js), and this script was not
+        # updated with it — so the browser arrived with no key, sat on the
+        # access-code screen, and the capture timed out waiting for `.item`.
+        # Seeding the wrong store fails silently, which is why it looked like a
+        # selector problem.
         await ctx.add_init_script(
-            "try { sessionStorage.setItem('intake.accessCode', "
+            "try { localStorage.setItem('intake.accessCode', "
             + json.dumps(KEY) + ") } catch (e) {}")
         page = await ctx.new_page()
         await page.goto(f"{APP}/?session={sid}", wait_until="networkidle")
