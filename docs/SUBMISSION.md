@@ -87,6 +87,58 @@ the direction that blocked a migration for three days.
 close which items, learned across interviews. Never about the people being
 interviewed — that would break the privacy guarantee that makes this deployable.
 
+## Data sources
+
+**No real client, patient or employer material is used anywhere** — not in the
+repo, not in the demo, not in the eval.
+
+- **The form template** (`templates/community-nursing-v1.json`) is *synthetic*,
+  written for this project and informed by the shape of published community
+  nursing assessment standards. It is not any employer's form. Item ids, wording
+  and guidance notes are ours.
+- **The second template** (insurance loss adjusting) is likewise synthetic, and
+  exists to demonstrate that the vertical is configuration rather than code.
+- **The 47 eval cases** (`eval/cases/`) are hand-written by us. The interviewee
+  answers are invented to probe specific failure modes — vague quantifiers,
+  answers split across turns, retractions, formal declines.
+- **The demo dialogue** (`demo/script.toml`) is scripted and voiced by Gemini
+  TTS. There is no recording of a real person in the video.
+- **Runtime data**: sessions hold verbatim quotes from whoever is speaking, and
+  are scoped to a job and a practitioner — never to a named subject. See
+  *Privacy by architecture* in the README.
+
+## Pre-existing and third-party code
+
+**All project code was written during the submission period (3–31 Aug 2026).**
+Nothing was carried in from an earlier project.
+
+Third-party dependencies, all used as published packages under their own
+licences — none vendored or modified:
+
+| Dependency | Use |
+|---|---|
+| `google-adk` 2.6.2 | agent framework — the whole orchestration layer |
+| `google-genai` 2.16.0 | Gemini calls via Vertex AI |
+| `google-cloud-firestore` 2.28.0 | session state |
+| `fastapi` 0.141.1 · `uvicorn` 0.52.1 | HTTP surface |
+| `opentelemetry-exporter-gcp-trace` 1.9.0 | tracing (wired, disabled — see Known limitations) |
+| `react` 18 · `react-dom` 18 · `vite` 6 | web client |
+| `playwright` | demo capture only, not shipped |
+| `pip-audit`, `pytest`, `pytest-asyncio`, `pyyaml` | CI and tests only |
+
+No third-party JavaScript or CSS is loaded from a CDN — the client has no
+external asset requests at all. No code was copied from tutorials, samples or
+the ADK reference recipes; ADK is consumed strictly through its public API.
+
+Generative assets in the demo video: the three voices are **Gemini 2.5 Flash
+TTS** on Vertex AI (`demo/voices.py`). No stock footage, music or images.
+
+**AI assistance:** the project was built with Claude Code as a pair programmer.
+Design decisions, architecture and the eval methodology are recorded with their
+reasoning in `docs/adr/`.
+
+Licence: PolyForm Noncommercial 1.0.0.
+
 ## Checklist
 
 - [x] Public repo, opens in incognito — **master was stuck on the scaffold commit until 20 Aug; 52 commits were unpushed**
@@ -100,4 +152,11 @@ interviewed — that would break the privacy guarantee that makes this deployabl
 - [x] Demo video re-rendered — 3:37, 84% speech, worst gap 4.1s, narration says "Gemini three point six Flash on Vertex A-I" aloud
 - [ ] Upload video to YouTube **public**, in English — allow hours for processing
 - [ ] Submission form drafted and saved
+- [x] Data sources documented (all synthetic — no real patient or employer material)
+- [x] Pre-existing / third-party code disclosed (none pre-existing; deps listed)
+- [x] Category selected: Collaborative Partner
+- [x] Model is Gemini 3.5+ (3.6 Flash)
+- [ ] Teammates added and invitations accepted (solo entry? confirm)
+- [ ] Startup Excellence — opt in only if entering, needs incorporated org name + corporate email
+- [ ] Optional bonus: publish `docs/blog-post.md`, post `docs/social-post.md` with #AllThingsAgenticHackathon
 - [x] Verified under 4:00 and frame-sampled: app renders, captions and cursor present, high-risk item shows "no suggested answer", eval card visible
