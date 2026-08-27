@@ -42,12 +42,11 @@ VOICES = {
 # is the difference between a demo that sounds like a screen reader and one that
 # sounds like a room with two people in it.
 STYLE = {
-    "narrator": "Read this briskly and clearly, like a confident product narrator "
-                "who has a lot to cover. Keep it moving, no dramatic pauses:",
-    "nurse": "Say this warmly and briskly, like a community nurse who has done this "
-             "a thousand times:",
-    "interviewee": "Say this like an elderly woman at home, a little vague, but do "
-                   "not drag it out:",
+    "narrator": "Say this like a documentary voice-over, warm and conversational, "
+                "unhurried but not slow:",
+    "nurse": "Say this warmly and briskly, like a community nurse who has done "
+             "this a thousand times:",
+    "interviewee": "Say this like an elderly woman at home, a little vague:",
 }
 
 # Delivery came out at 70 words per minute — roughly half a normal narration
@@ -67,6 +66,10 @@ STYLE = {
 # prints the measured wpm.
 TEMPO = {"narrator": 1.22, "nurse": 1.10, "interviewee": 1.0}
 
+class _Resynth(Exception):
+    """Raised when the generated audio does not match the line it was given."""
+
+
 _client: genai.Client | None = None
 
 
@@ -82,8 +85,64 @@ def client() -> genai.Client:
     return _client
 
 
-def synth(role: str, text: str) -> pathlib.Path:
-    """Return a wav of `text` spoken by `role`, generating it only once."""
+def _spoken_text_is_wrong(wav: pathlib.Path, wanted: str) -> str | None:
+    """Transcribe the clip back and check the model spoke only the line.
+
+    Two failures were shipping in the finished video before this existed. The
+    style direction is prepended to the text, and the model sometimes *reads it
+    out* — "Keep it moving. One routing call, then three Gemini calls…". And
+    occasionally it says the whole line twice.
+
+    Neither is visible from a duration check and neither raises. The only way to
+    catch them is to listen, so this listens. One extra call per new clip; the
+    cache means it never runs twice for the same line.
+    """
+    from google.genai import types as _t
+    try:
+        got = client().models.generate_content(
+            model="gemini-3.6-flash",
+            contents=[_t.Part.from_bytes(data=wav.read_bytes(), mime_type="audio/wav"),
+                      "Transcribe this audio verbatim. Output only the words spoken."],
+        ).text or ""
+    except Exception:
+        return None  # never fail a render because the checker itself broke
+
+    norm = lambda x: " ".join(
+        c for c in x.lower().replace(",", " ").replace(".", " ").split())
+    heard, want = norm(got), norm(wanted)
+
+    # the direction leaked into the speech
+    for phrase in ("say this", "voice-over", "conversational", "unhurried",
+                   "briskly", "like a community nurse", "like an elderly woman"):
+        if phrase in heard:
+            return f"style direction was spoken aloud: {got.strip()[:70]!r}"
+
+    # the line was read twice
+    if len(heard.split()) > 1.55 * max(len(want.split()), 1):
+        return f"line appears to be spoken more than once ({len(heard.split())} words for {len(want.split())})"
+    return None
+
+
+def synth(role: str, text: str, attempts: int = 3) -> pathlib.Path:
+    """A wav of `text` spoken by `role`, generated once and verified.
+
+    Verification is not optional here. Two failures shipped in a finished video
+    before it existed: the style direction read out as if it were the script,
+    and a line spoken twice. Both are non-deterministic, so a retry usually
+    clears them.
+    """
+    for n in range(attempts):
+        try:
+            return _synth_once(role, text)
+        except _Resynth as exc:
+            if n == attempts - 1:
+                raise RuntimeError(
+                    f"{role} clip still wrong after {attempts} attempts ({exc}). "
+                    f"Line: {text[:60]!r}") from None
+    raise AssertionError("unreachable")
+
+
+def _synth_once(role: str, text: str) -> pathlib.Path:
     CACHE.mkdir(exist_ok=True)
     voice = VOICES[role]
     key = hashlib.sha256(
@@ -131,6 +190,15 @@ def synth(role: str, text: str) -> pathlib.Path:
         w.setsampwidth(2)
         w.setframerate(SAMPLE_RATE)
         w.writeframes(pcm)
+
+    problem = _spoken_text_is_wrong(raw, text)
+    if problem:
+        # One retry. The failure is non-deterministic, so a second generation
+        # usually lands clean; a persistent one is worth stopping the render for
+        # rather than shipping a narrator that talks over itself again.
+        print(f"    re-synthesising {role}: {problem}", flush=True)
+        raw.unlink(missing_ok=True)
+        raise _Resynth(problem)
 
     tempo = TEMPO.get(role, 1.0)
     if tempo == 1.0:

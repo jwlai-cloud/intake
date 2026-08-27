@@ -1,4 +1,9 @@
-const BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
+// `??`, not `||`. The deployed build sets VITE_API_BASE to an empty string to
+// mean "call my own origin", and an empty string is falsy — with `||` that fell
+// straight through to the localhost default, so the hosted app shipped pointing
+// at a backend on the judge's own machine. Only an unset variable should fall
+// back to local dev.
+const BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000'
 
 /**
  * The access code is typed in by the user and kept in sessionStorage — never

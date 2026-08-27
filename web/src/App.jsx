@@ -265,7 +265,7 @@ function AccessCodeField() {
         </button>
       </div>
       <p className="why" style={{ marginTop: 8 }}>
-        Held in this tab only, never stored in the build. Every interview turn
+        Kept in this browser, never built into the bundle. Every interview turn
         calls Vertex AI, so the endpoint is not left open.
       </p>
     </div>
