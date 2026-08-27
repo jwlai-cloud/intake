@@ -16,7 +16,8 @@ touch the repo, the video, or anything linked from the form after that.
 | Google SDK used | `google-adk` 2.6.2 · `google-genai` 2.16.0 |
 | Hosted project URL | https://intake-agent-320877670799.us-central1.run.app |
 | Repo | https://github.com/jwlai-cloud/intake (public) |
-| Gallery thumbnail | `docs/diagrams/intake-thumbnail.png` (1280×720 — first image in the gallery becomes the card) |
+| Gallery thumbnail | `docs/diagrams/intake-thumbnail-scene.png` (1280×720 — first image in the gallery becomes the card) |
+| Alt thumbnail | `docs/diagrams/intake-thumbnail.png` — flat typographic version, same claim |
 | Reproducible testing instructions in README? | Yes — *For reviewers and judges* + *Spin-up* |
 | Date started | 3 Aug 2026 |
 
@@ -104,6 +105,10 @@ repo, not in the demo, not in the eval.
   answers split across turns, retractions, formal declines.
 - **The demo dialogue** (`demo/script.toml`) is scripted and voiced by Gemini
   TTS. There is no recording of a real person in the video.
+- **The gallery thumbnail** (`docs/diagrams/intake-thumbnail-scene.png`) is an
+  AI-generated scene — Gemini 3.1 Flash Image on Vertex AI. It depicts nobody
+  real. No photograph of an actual patient or practitioner appears anywhere in
+  this submission.
 - **Runtime data**: sessions hold verbatim quotes from whoever is speaking, and
   are scoped to a job and a practitioner — never to a named subject. See
   *Privacy by architecture* in the README.
