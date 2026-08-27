@@ -13,6 +13,11 @@ trap 'rm -rf "$STAGE"' EXIT
 cp -r backend/intake_agent backend/Dockerfile backend/requirements.txt backend/.dockerignore "$STAGE/"
 cp -r templates "$STAGE/templates"
 
+# The built client, so the deployed URL serves the actual product rather than a
+# bare API that answers 404 at /. Built against a same-origin API base.
+( cd web && VITE_API_BASE= npm run build >/dev/null )
+cp -r web/dist "$STAGE/web"
+
 gcloud run deploy "$SERVICE" \
   --source "$STAGE" \
   --project "$PROJECT" \

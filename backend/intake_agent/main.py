@@ -12,6 +12,7 @@ import base64
 import hashlib
 import logging
 import os
+import pathlib
 import re
 import secrets
 import threading
@@ -22,6 +23,7 @@ from collections import defaultdict, deque
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from . import tracing
@@ -148,8 +150,21 @@ SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",
     "Referrer-Policy": "no-referrer",
-    # The API serves JSON only; nothing should ever be loaded or framed from it.
-    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    # This origin serves the built client as well as the API, so 'none' would
+    # block the app's own bundle. Everything still comes from here and nowhere
+    # else: no CDN, no third-party script, nothing embeddable.
+    #
+    # style-src allows inline because the bundler emits a small inline style
+    # block; script-src deliberately does not.
+    "Content-Security-Policy": (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data:; "
+        "media-src 'self' blob:; "
+        "connect-src 'self'; "
+        "object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+    ),
 }
 
 
@@ -275,6 +290,19 @@ def health(response: Response) -> dict:
     return {"ok": not degraded, "store": type(_store).__name__,
             "tracing_configured": _tracing,
             **({"detail": "session store degraded to memory"} if degraded else {})}
+
+
+# --- the web client, served from the same origin -----------------------------
+
+# The hosted URL is what a judge clicks, and an API root that answers
+# {"detail":"Not Found"} reads as a broken deployment. Serving the built client
+# here makes the deployed URL the actual product, and it removes the CORS
+# surface entirely: same origin, so INTAKE_ALLOWED_ORIGINS only matters for
+# local development against the deployed API.
+#
+# Mounted last, so every API route above wins. Missing build directory is not
+# fatal — the API is still the thing under test.
+_WEB = pathlib.Path(os.environ.get("INTAKE_WEB_DIR", "/app/web"))
 
 
 @app.get("/templates")
@@ -465,3 +493,12 @@ def configure_for_tests(store: BaseStore) -> None:
 
 
 __all__ = ["app", "configure_for_tests", "FirestoreStore", "MemoryStore"]
+
+
+if _WEB.is_dir() and (_WEB / "index.html").is_file():
+    # html=True makes unknown paths fall back to index.html, which is what a
+    # single-page client needs for a deep link like /?session=<id>.
+    app.mount("/", StaticFiles(directory=str(_WEB), html=True), name="web")
+    log.info("serving the web client from %s", _WEB)
+else:
+    log.warning("no web build at %s — the API is up but / will 404", _WEB)

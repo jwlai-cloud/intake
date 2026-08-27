@@ -16,5 +16,10 @@ COPY intake_agent ./intake_agent
 COPY templates ./templates
 ENV INTAKE_TEMPLATE_DIR=/app/templates
 
+# The built web client. Copied after the templates so a UI-only change does not
+# bust the dependency layer.
+COPY web ./web
+ENV INTAKE_WEB_DIR=/app/web
+
 # Cloud Run sets $PORT; honour it rather than hard-coding 8080.
 CMD exec uvicorn intake_agent.main:app --host 0.0.0.0 --port ${PORT}
