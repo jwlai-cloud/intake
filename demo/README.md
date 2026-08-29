@@ -72,3 +72,19 @@ cd eval && uv run python run_eval.py --item M14
 The interviewee does not have to say these sentences exactly in a real
 interview — the adjudicator handles paraphrase, which is the whole point. But
 on an unedited take, use the phrasings that have been measured.
+
+## Human takes for the interview lines
+
+A judge said on camera that AI voices "feel less genuine". The narration can
+stay synthetic; the two people in the room should not.
+
+`interview-audio/` holds the six interview lines as separate wavs, a
+`RECORDING-SCRIPT.md` with the target length of each, and a `manifest.json`
+mapping file to line. Record over them, keep the file names, drop them back in
+that folder, and the next render uses them instead of synthesising — matched on
+the manifest, so a small wording tweak in `script.toml` does not silently fall
+back to the robot.
+
+Keep each take within about a second of its target. The timeline is built from
+measured durations, so a much longer take pushes everything after it out of
+sync.

@@ -13,6 +13,7 @@ touch the repo, the video, or anything linked from the form after that.
 | Gemini model | `gemini-3.6-flash` via **Vertex AI** |
 | Agent framework | **Google ADK 2.6.2** (Python) |
 | Google Cloud services | Cloud Run, Firestore, Secret Manager, Cloud Logging |
+| Self-improvement (Collaborative Partner criterion) | practitioner-scoped memory — learns question phrasings that worked and categories she dismisses; never anything about interviewees (ADR-0014) |
 | Additional Google AI models | Gemini 2.5 Flash TTS (demo voices) · Gemini 3.1 Flash Image (gallery thumbnail) — both on Vertex AI |
 | Google SDK used | `google-adk` 2.6.2 · `google-genai` 2.16.0 |
 | Hosted project URL | https://intake-agent-320877670799.us-central1.run.app |
@@ -156,7 +157,7 @@ Licence: PolyForm Noncommercial 1.0.0.
       the new security headers being live. The `gcloud` CLI credential is still
       broken for this project; ADC is not, so deploys work with
       `CLOUDSDK_AUTH_ACCESS_TOKEN=$(gcloud auth application-default print-access-token)`
-- [x] Demo video re-rendered — 3:37, 84% speech, worst gap 4.1s, narration says "Gemini three point six Flash on Vertex A-I" aloud
+- [x] Demo video re-rendered — 3:49, 85% speech, worst gap 3.8s. Every one of the 25 clips transcribed back and checked: no style direction spoken aloud, no repeated lines
 - [ ] Upload video to YouTube **public**, in English — allow hours for processing
 - [ ] Submission form drafted and saved
 - [x] Data sources documented (all synthetic — no real patient or employer material)

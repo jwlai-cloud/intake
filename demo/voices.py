@@ -123,6 +123,37 @@ def _spoken_text_is_wrong(wav: pathlib.Path, wanted: str) -> str | None:
     return None
 
 
+# Human recordings, dropped in by hand, win over anything synthesised. A judge
+# said on camera that AI voices "feel less genuine", and the two people in the
+# room are exactly where that lands — the narration can stay synthetic, but the
+# nurse and the person being interviewed should sound like people.
+HUMAN = pathlib.Path(__file__).resolve().parent / "interview-audio"
+
+
+def _human_take(role: str, text: str) -> pathlib.Path | None:
+    """A recorded line matching this text, if one has been dropped in.
+
+    Matched on the manifest rather than on a hash of the text, so a recording
+    survives a small wording tweak in script.toml — the alternative is a silent
+    fall back to the synthetic take after an innocent edit.
+    """
+    manifest = HUMAN / "manifest.json"
+    if not manifest.is_file():
+        return None
+    import json
+    try:
+        entries = json.loads(manifest.read_text())
+    except (TypeError, ValueError):
+        return None
+    key = " ".join(text.split())
+    for entry in entries:
+        if entry.get("role") == role and " ".join(entry.get("text", "").split()) == key:
+            take = HUMAN / entry["file"]
+            if take.is_file():
+                return take
+    return None
+
+
 def synth(role: str, text: str, attempts: int = 3) -> pathlib.Path:
     """A wav of `text` spoken by `role`, generated once and verified.
 
@@ -131,6 +162,10 @@ def synth(role: str, text: str, attempts: int = 3) -> pathlib.Path:
     and a line spoken twice. Both are non-deterministic, so a retry usually
     clears them.
     """
+    take = _human_take(role, text)
+    if take is not None:
+        return _normalised(take)
+
     for n in range(attempts):
         try:
             return _synth_once(role, text)
@@ -209,6 +244,16 @@ def _synth_once(role: str, text: str) -> pathlib.Path:
                     "-filter:a", f"atempo={tempo}", str(path)], check=True)
     raw.unlink(missing_ok=True)
     return path
+
+
+def _normalised(take: pathlib.Path) -> pathlib.Path:
+    """A human recording resampled to the timeline's format, cached by mtime."""
+    dst = CACHE / f"human-{take.stem}-{int(take.stat().st_mtime)}.wav"
+    if not dst.exists():
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(take),
+                        "-ac", "1", "-ar", str(SAMPLE_RATE), str(dst)], check=True)
+        print(f"    using the human take for {take.name}", flush=True)
+    return dst
 
 
 def duration(path: pathlib.Path) -> float:
