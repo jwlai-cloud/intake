@@ -35,6 +35,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from .memory import PractitionerMemory, PractitionerMemoryMixin
 from .template import Template
 
 log = logging.getLogger(__name__)
@@ -128,7 +129,7 @@ class SessionState:
         return SessionState(**copy.deepcopy(raw))
 
 
-class BaseStore:
+class BaseStore(PractitionerMemoryMixin):
     """Shared session mechanics. Subclasses only supply load and save."""
 
     def _load(self, session_id: str) -> SessionState:
@@ -291,6 +292,15 @@ class MemoryStore(BaseStore):
 
     def __init__(self) -> None:
         self._docs: dict[str, dict] = {}
+        self._memories: dict[str, dict] = {}
+
+    def _load_memory(self, practitioner_id: str) -> PractitionerMemory:
+        raw = self._memories.get(practitioner_id)
+        return (PractitionerMemory.from_dict(raw) if raw
+                else PractitionerMemory(practitioner_id=practitioner_id))
+
+    def _save_memory(self, memory: PractitionerMemory) -> None:
+        self._memories[memory.practitioner_id] = memory.to_dict()
 
     def _load(self, session_id: str) -> SessionState:
         try:
@@ -325,6 +335,19 @@ class FirestoreStore(BaseStore):
 
     def _save(self, state: SessionState) -> None:
         self._doc(state.session_id).set(state.to_dict())
+
+    def _memory_doc(self, practitioner_id: str):
+        # A separate collection, not a subcollection of a session. Memory
+        # outlives every session and belongs to nobody being interviewed.
+        return self._db.collection("practitioners").document(practitioner_id)
+
+    def _load_memory(self, practitioner_id: str) -> PractitionerMemory:
+        snap = self._memory_doc(practitioner_id).get()
+        return (PractitionerMemory.from_dict(snap.to_dict()) if snap.exists
+                else PractitionerMemory(practitioner_id=practitioner_id))
+
+    def _save_memory(self, memory: PractitionerMemory) -> None:
+        self._memory_doc(memory.practitioner_id).set(memory.to_dict())
 
     def probe(self) -> None:
         """Round-trip a read so an unusable database fails at startup, not mid-visit.

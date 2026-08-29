@@ -36,6 +36,7 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from .adjudicator import DEFAULT_MODEL, adjudicate
+from .memory import brief_section
 from .router import route
 from .store import ANSWERED, FALLBACK_DESTINATION, BaseStore, SessionState
 
@@ -244,18 +245,31 @@ class AdjudicationAgent(BaseAgent):
                                 "(%d chars, not found in %d turn(s)) — dropped",
                                 item.id, len(evidence), len(heard))
                     evidence = ""
+                was = session.slots.get(item.id, {}).get("state", "open")
+                asked = (session.next_question or {}).get("item_id")
+                asked_prompt = (session.next_question or {}).get("prompt", "")
+
                 after = self.store.apply_verdict(
                     session_id, item.id, verdict.verdict,
                     value=evidence, evidence=evidence,
                     missing=list(verdict.missing), reason=verdict.reason,
                 )
                 state_now = after.slots[item.id]["state"]
+
+                # The agent suggested a question, she asked it, and the item
+                # closed without a second go. That phrasing worked — remember it
+                # for this practitioner, for this item, and for nothing else.
+                if (state_now == ANSWERED and was == "open"
+                        and asked == item.id and asked_prompt):
+                    self.store.remember_effective_phrasing(
+                        after.practitioner_id, item.id, asked_prompt)
                 updated.append(f"{item.id}={state_now}")
                 log.info("             %s · %s → %s", item.id,
                          verdict.verdict, state_now)
 
         session = self.store.get(session_id)
-        brief = build_coach_brief(session, turns)
+        brief = build_coach_brief(
+            session, turns, self.store.memory(session.practitioner_id))
         resolved, required = session.coverage()
 
         # The event carries content as well as the state delta. An event with
@@ -286,7 +300,8 @@ class AdjudicationAgent(BaseAgent):
         )
 
 
-def build_coach_brief(session: SessionState, turns: list[str]) -> str:
+def build_coach_brief(session: SessionState, turns: list[str],
+                      memory=None) -> str:
     """A short factual brief. Never the transcript — that is the point of ADR-0002."""
     lines = []
     resolved, total = session.coverage()
@@ -311,6 +326,11 @@ def build_coach_brief(session: SessionState, turns: list[str]) -> str:
 
     if not outstanding:
         lines.append("- none. Every required item has a recorded resolution.")
+
+    if memory is not None:
+        learned = brief_section(memory, outstanding)
+        if learned:
+            lines.append(learned)
 
     lines.append("\nVerbatim interviewee turns from this chunk:")
     lines.extend(f'- "{t}"' for t in turns) if turns else lines.append("- (none)")

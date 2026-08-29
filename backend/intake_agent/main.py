@@ -336,6 +336,7 @@ def get_template(template_id: str) -> dict:
 def create_session(body: NewSession) -> dict:
     try:
         state = _store.create(body.template_id, body.practitioner_id)
+        _store.count_interview(body.practitioner_id)
     except TemplateError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from None
     return _view(state)
@@ -426,7 +427,17 @@ def update_highlight(session_id: str, highlight_id: str, body: HighlightUpdate) 
     get_session(session_id)
     if body.status not in {"confirmed", "dismissed"}:
         raise HTTPException(status_code=400, detail="status must be confirmed or dismissed")
-    return _view(_store.set_highlight_status(session_id, highlight_id, body.status))
+    state = _store.set_highlight_status(session_id, highlight_id, body.status)
+
+    # A dismissal is the clearest signal this practitioner gives us. Learn the
+    # *category* she keeps rejecting — the item id, never the quote she threw
+    # away, which is interviewee speech.
+    if body.status == "dismissed":
+        for h in state.highlights:
+            if h["id"] == highlight_id:
+                _store.remember_dismissal(state.practitioner_id, h["item_id"])
+                break
+    return _view(state)
 
 
 @app.post("/sessions/{session_id}/report", dependencies=[Depends(require_api_key)])
