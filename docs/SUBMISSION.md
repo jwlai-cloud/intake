@@ -13,6 +13,7 @@ touch the repo, the video, or anything linked from the form after that.
 | Gemini model | `gemini-3.6-flash` via **Vertex AI** |
 | Agent framework | **Google ADK 2.6.2** (Python) |
 | Google Cloud services | Cloud Run, Firestore, Secret Manager, Cloud Logging |
+| Additional Google AI models | Gemini 2.5 Flash TTS (demo voices) · Gemini 3.1 Flash Image (gallery thumbnail) — both on Vertex AI |
 | Google SDK used | `google-adk` 2.6.2 · `google-genai` 2.16.0 |
 | Hosted project URL | https://intake-agent-320877670799.us-central1.run.app |
 | Repo | https://github.com/jwlai-cloud/intake (public) |

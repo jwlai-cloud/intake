@@ -186,13 +186,22 @@ that lived in an instruction are the ones that broke.
 
 ## What's next for Intake
 
-Memory, scoped to the practitioner. The app already records which suggested
-highlights she keeps and which she bins, and does nothing with it yet. The
-useful thing to learn isn't about the people being interviewed — it's which
-phrasings actually close which items, across all her interviews. "Nurses who ask
-this one this way close it first time; your usual wording takes three goes."
-That's a mentor. Learning about patients would wreck the privacy property that
-makes this usable at all, so that's the one direction I won't go.
+More memory. It now learns two things across a practitioner's interviews: a
+question phrasing that closed an item on the first ask, and the categories whose
+highlights she keeps dismissing. From her second interview the coach offers back
+a wording that worked, and stops suggesting the chips she throws away — while
+still asking the required question, because muting a suggestion must never mute
+an obligation.
+
+What it deliberately doesn't learn is anything about the people interviewed.
+"People like this one usually under-report falls" would be useful and would
+break the privacy property that makes this deployable, so there's a guard that
+refuses any candidate that's quoted, isn't a question, or has a first-person
+subject — and a test that feeds it five samples of real interviewee speech and
+fails if any of them survives.
+
+Next would be report voice, and letting a whole team pool phrasings rather than
+each nurse starting cold.
 
 Real per-user auth. Right now access is one shared key plus session ids that are
 128 bits of randomness. It works, but it stops working the moment an id ends up

@@ -111,6 +111,42 @@ same per chunk as a ten-minute one.
 
 See `docs/ARCHITECTURE.md` for detail and `docs/adr/` for why.
 
+## Where things are
+
+Judges asked for this, and it is genuinely the fastest way in. The adjudicator
+and the eval are the two files that matter; everything else supports them.
+
+```
+backend/intake_agent/
+  adjudicator.py   THE PRODUCT — one schema-constrained Gemini call per item,
+                   decides answered vs mentioned against the guidance note
+  agent.py         the ADK pipeline: TurnPipeline (custom BaseAgent),
+                   the fanned-out adjudication stage, and the Escalator
+  memory.py        what the agent learns across interviews, and the guard
+                   that stops it ever learning about an interviewee
+  router.py        narrows which open items a chunk can possibly bear on
+  store.py         Firestore session state + practitioner memory
+  template.py      the form-as-config engine (ADR-0003) — zero domain logic
+  report.py        assembles the report from recorded state; no model call
+  main.py          FastAPI surface, API key, rate limit, security headers
+backend/adk_apps/intake/
+  agent.py         module-level root_agent, for adk web / agents-cli eval
+backend/tests/     131 tests, no network — every model call is stubbed
+backend/tests/eval/ behavioural eval over the pipeline (deterministic metrics)
+eval/
+  run_eval.py      THE GATE — 47 labelled cases, exits non-zero if an answer a
+                   human called insufficient is ever marked sufficient
+  cases/           the labelled cases, 12 of them adversarial
+templates/         the forms. Two professions, one engine, no code difference
+web/src/           React client: mic → chunks → coverage ring → three-state gate
+docs/adr/          why each decision was made, including the ones reversed
+docs/diagrams/     architecture, sequence, orchestration (archify + static PNG)
+demo/              the demo video pipeline: script, voices, capture, mux
+```
+
+**If you only open two files:** `backend/intake_agent/adjudicator.py` for the
+judgement, and `eval/run_eval.py` for the proof it holds.
+
 ## Spin-up
 
 ### Prerequisites
@@ -293,10 +329,11 @@ users.
 was ever observed arriving. Shipped off rather than as a flag that lies about
 what it does.
 
-**Practitioner memory is designed, not built.** The session schema documents
-`practitioners/{id}` with dismissed categories, phrasing notes and report voice.
-Nothing reads or writes it yet. It is the honest next feature, and it would
-learn about the *practitioner* — never about the people being interviewed.
+**Practitioner memory is deliberately narrow.** It learns question phrasings
+that worked and categories she dismisses — nothing else, and nothing about the
+people interviewed (ADR-0014). Report voice is documented in the schema and not
+yet implemented. Phrasings are also not shared between practitioners, so a new
+user starts cold.
 
 ## Licence
 
