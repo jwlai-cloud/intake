@@ -358,3 +358,33 @@ async def test_once_an_interviewee_is_heard_the_practitioner_stops_counting(
         {"speaker": "practitioner", "text": "So that's three falls, is that right?"}])
     [e async for e in stage._run_async_impl(ctx)]
     assert called == [], "the practitioner's own summary must not close an item"
+
+
+@pytest.mark.asyncio
+async def test_a_suggested_question_that_closes_an_item_is_remembered(
+        store, session, monkeypatch):
+    """The signal memory is built on, pinned against the bug that made it inert.
+
+    An item is normally raised vaguely first (partial) and closed on the
+    follow-up. The first version of this only learned when the slot went
+    straight from `open` to `answered`, so in a week of real use it learned
+    nothing at all.
+    """
+    store.count_interview("p1")
+    store.set_next_question(session.session_id, {
+        "item_id": "M14", "prompt": "How many times, and what happened the last one?",
+        "why": "count"})
+    store.apply_verdict(session.session_id, "M14", "insufficient", value="wobbles",
+                        evidence="wobbles", missing=["number of falls"], reason="vague")
+
+    monkeypatch.setattr(agent_mod, "adjudicate", lambda item, turns, **k: Verdict(
+        "sufficient", "Three times since Christmas.", (), "ok")
+        if item.id == "M14" else Verdict("insufficient", "", ("x",), "no"))
+    stage = AdjudicationAgent(name="adjudication", store=store)
+    ctx = _ctx(session.session_id,
+               [{"speaker": "interviewee", "text": "Three times since Christmas."}])
+    [e async for e in stage._run_async_impl(ctx)]
+
+    learned = store.memory("p1").effective_phrasings.get("M14") or []
+    assert learned == ["How many times, and what happened the last one?"], \
+        "the wording that closed the item is what memory is for"

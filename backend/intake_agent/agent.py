@@ -254,7 +254,6 @@ class AdjudicationAgent(BaseAgent):
                                 "(%d chars, not found in %d turn(s)) — dropped",
                                 item.id, len(evidence), len(heard))
                     evidence = ""
-                was = session.slots.get(item.id, {}).get("state", "open")
                 asked = (session.next_question or {}).get("item_id")
                 asked_prompt = (session.next_question or {}).get("prompt", "")
 
@@ -265,11 +264,18 @@ class AdjudicationAgent(BaseAgent):
                 )
                 state_now = after.slots[item.id]["state"]
 
-                # The agent suggested a question, she asked it, and the item
-                # closed without a second go. That phrasing worked — remember it
-                # for this practitioner, for this item, and for nothing else.
-                if (state_now == ANSWERED and was == "open"
-                        and asked == item.id and asked_prompt):
+                # The agent suggested a question for this item, and the item
+                # then closed. That phrasing did its job — remember it for this
+                # practitioner, for this item, and for nothing else.
+                #
+                # The first version also required the slot to have been `open`,
+                # meaning "closed on the very first ask". Measured against the
+                # deployed service, that combination essentially never happens:
+                # an item is normally raised vaguely (partial) and closed on the
+                # follow-up, which is precisely the case where the suggested
+                # wording deserves the credit. Memory learned nothing for a week
+                # because of it.
+                if state_now == ANSWERED and asked == item.id and asked_prompt:
                     self.store.remember_effective_phrasing(
                         after.practitioner_id, item.id, asked_prompt)
                 updated.append(f"{item.id}={state_now}")
