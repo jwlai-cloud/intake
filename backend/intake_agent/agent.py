@@ -77,7 +77,13 @@ def make_transcriber(model: str = DEFAULT_MODEL) -> LlmAgent:
             "including hedges and false starts — do not tidy the speech up, "
             "because whether an answer was vague is exactly what is being judged "
             "downstream. Never invent a turn. If the audio contains no speech, "
-            "return an empty list."
+            "return an empty list.\n\n"
+            "If you hear only ONE voice in the whole chunk, label every turn "
+            "`interviewee`. A lone speaker is someone giving answers — there is "
+            "no second party to attribute anything to, and labelling them "
+            "`practitioner` would discard the entire recording. Use "
+            "`practitioner` only when you can actually hear two different "
+            "people and can tell which is asking."
         ),
         output_schema=TRANSCRIBE_SCHEMA,
         output_key="transcript",
@@ -175,7 +181,10 @@ class AdjudicationAgent(BaseAgent):
         turns = [t["text"] for t in transcript.get("turns", [])
                  if t.get("speaker") == "interviewee" and t.get("text", "").strip()]
 
+
         session = self.store.get(session_id)
+
+
         open_items = [session.template[i] for i in session.outstanding_ids()]
         relevant_ids: list[str] = []
         updated: list[str] = []

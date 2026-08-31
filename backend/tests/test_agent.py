@@ -321,3 +321,40 @@ def test_a_fabricated_highlight_quote_is_dropped(store, session):
     quotes = [h["quote"] for h in store.get(session.session_id).highlights]
     assert quotes == ["Three times since Christmas."], \
         "a highlight is its quote; an unverifiable one has nothing left to show"
+
+
+# --- a lone tester must not see a dead screen --------------------------------
+
+def test_the_transcriber_labels_a_lone_voice_as_the_interviewee():
+    """Found by actually recording into the deployed app.
+
+    One person testing alone is a single voice, and the transcriber labelled it
+    `practitioner`. Adjudication only ever looks at `interviewee` turns, so
+    every chunk was discarded, every turn finished in 0.1s having done nothing,
+    and the screen sat inert — which reads as a broken product, and is exactly
+    what a judge trying it alone would have seen.
+
+    Fixed at the transcriber because that is the only stage that can hear how
+    many people are in the room. The alternative — relaxing the filter in
+    adjudication — would have broken the guarantee below.
+    """
+    instruction = agent_mod.make_transcriber().instruction
+    assert "only ONE voice" in instruction
+    assert "label every turn `interviewee`" in instruction
+    assert "Use `practitioner` only when you can actually hear two" in instruction
+
+
+@pytest.mark.asyncio
+async def test_once_an_interviewee_is_heard_the_practitioner_stops_counting(
+        store, session, monkeypatch):
+    """The guarantee that matters: in a real two-person interview, the
+    professional restating an answer must never close the item."""
+    store.append_turns(session.session_id, ["Three times since Christmas."])
+    called = []
+    monkeypatch.setattr(agent_mod, "adjudicate",
+                        lambda *a, **k: called.append(1) or Verdict("sufficient", "x", (), ""))
+    stage = AdjudicationAgent(name="adjudication", store=store)
+    ctx = _ctx(session.session_id, [
+        {"speaker": "practitioner", "text": "So that's three falls, is that right?"}])
+    [e async for e in stage._run_async_impl(ctx)]
+    assert called == [], "the practitioner's own summary must not close an item"
