@@ -126,11 +126,26 @@ ADK's current eval tooling, and a four-line custom BaseAgent is the only version
 I can actually evaluate. After that I stopped trusting write-ups and started
 running `inspect` against the installed package for every API claim.
 
-I lost most of a day to a 403 that looked like a spend cap. Every eval case
-failed with PERMISSION_DENIED on a project I own, billing on, API enabled. It
-was `GOOGLE_APPLICATION_CREDENTIALS` in my shell pointing at a different
-project's service account. It silently overrides application default
-credentials, so everything was authenticating as the wrong account.
+The one that actually mattered I found two days before the deadline, by asking
+someone to open the deployed app and talk into it. Nothing visibly happened.
+
+Chunks were arriving, HTTP 200, the pipeline was running — and every turn
+finished in about a tenth of a second having done nothing. A real turn takes six
+seconds. The transcriber labels each turn `practitioner` or `interviewee`, and
+adjudication only reads `interviewee` turns. One person testing alone is a
+single voice, and the model reasonably labelled it `practitioner`. Every chunk
+was discarded and the screen sat inert.
+
+I had tested the API with curl, the text path, and an automated browser capture
+— but that capture runs Chromium with a fake audio device. I had verified a
+proxy for the product and called it the product.
+
+Where the fix went matters more than the fix. My first attempt relaxed the
+filter in adjudication, and it immediately broke a test asserting that a nurse
+restating an answer must never close an item. Same input, two opposite correct
+answers — the adjudicator can't tell a lone tester from a professional
+summarising. The transcriber can: it's the only stage that hears how many people
+are in the room.
 
 I also caused a privacy leak and had to fix it. Vertex errors echo the request
 that caused them, and the adjudicator's request body is the interviewee talking.
@@ -183,10 +198,13 @@ set that passes 100% the first time isn't telling you anything.
 Read the installed package instead of the docs. The one time I trusted a written
 note, it was wrong in the exact direction that blocked me for three days.
 
-Measure before you blame something. I was sure the demo's text-to-speech was
-eating my Vertex budget. Cloud Monitoring said TTS was 0.8% of tokens and the
-app itself was 66%. I'd worked it out by counting files on disk instead of
-looking at billing, and I was wrong by about a hundredfold.
+A feature can be wired, deployed, and quietly doing nothing. Memory shipped and
+persisted, and I'd written it into the description as working. When someone
+asked what it did, I looked at the production data instead of the code: every
+practitioner record had learned exactly zero phrasings. The condition required
+an item to go straight from open to answered, and items are normally raised
+vaguely first — so the one case that actually happens was the one case excluded.
+Nothing errored. Nothing logged. It just never fired.
 
 And a guarantee that only exists in a prompt isn't a guarantee. Every rule that
 survived is enforced by a schema, a fixed list, or a substring check. The ones
