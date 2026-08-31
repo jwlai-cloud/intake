@@ -250,7 +250,12 @@ def _normalised(take: pathlib.Path) -> pathlib.Path:
     """A human recording resampled to the timeline's format, cached by mtime."""
     dst = CACHE / f"human-{take.stem}-{int(take.stat().st_mtime)}.wav"
     if not dst.exists():
+        # Loudness-matched, not just resampled. A phone recording lands around
+        # -32 dB and the synthesised narration sits near -16, so an unprocessed
+        # take sounds like it was recorded in the next room. loudnorm targets a
+        # broadcast-ish -16 LUFS so the two sit together.
         subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(take),
+                        "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
                         "-ac", "1", "-ar", str(SAMPLE_RATE), str(dst)], check=True)
         print(f"    using the human take for {take.name}", flush=True)
     return dst

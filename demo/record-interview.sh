@@ -29,9 +29,16 @@ say_line() {  # file | who | target seconds | text
     read -r -p "  You already recorded this. Redo it? [y/N] " a
     [[ "$a" =~ ^[Yy]$ ]] || return
   fi
-  read -r -p "  Press Enter to start, then speak. Ctrl-C when done. "
+  # AVFoundation needs about half a second to open the device, and anything
+  # said in that window is simply not captured — which silently ate the first
+  # words of two takes. Start the recorder, let it settle, *then* cue.
+  read -r -p "  Press Enter, wait for GO, then speak. Ctrl-C when done. "
   ffmpeg -hide_banner -loglevel error -f avfoundation -i ":$DEV" \
-         -ac 1 -ar 24000 -y "$file" 2>/dev/null
+         -ac 1 -ar 24000 -y "$file" 2>/dev/null &
+  local pid=$!
+  sleep 1.2
+  echo "  ▶ GO — speak now."
+  wait $pid 2>/dev/null
   if [ -s "$file" ]; then
     local d
     d=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$file" 2>/dev/null)

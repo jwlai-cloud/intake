@@ -71,7 +71,11 @@ in Firestore, the API key in Secret Manager, and the agent's own audit trail in
 Cloud Logging.
 
 It is audio in, not text. Real speech, chunked at 15 to 20 seconds, transcribed
-with speaker attribution and then judged — the vagueness of a spoken answer is
+with speaker attribution and then judged. The transcription is Gemini 3.6 Flash
+itself rather than a speech-to-text service — I need to know *who* said
+something, not just what was said, because an answer only counts when it came
+from the person being interviewed and not from the nurse restating it. One
+multimodal call gives me both — the vagueness of a spoken answer is
 the whole signal, and it does not survive a text-only pipeline.
 
 One chunk of audio in, one turn of work out:

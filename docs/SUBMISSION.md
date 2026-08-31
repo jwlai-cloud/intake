@@ -139,6 +139,16 @@ Audio in, not text. Real speech is chunked at 15–20s, transcribed with speaker
 attribution, and adjudicated — the vagueness of a spoken answer is the signal
 the product exists to catch, and it does not survive a text-only pipeline.
 
+**Transcription is Gemini 3.6 Flash itself**, not Cloud Speech-to-Text and not
+Chirp. The audio goes into the same multimodal model as a `Part.from_bytes`,
+and one schema-constrained call returns speaker-attributed turns. That is a
+deliberate choice rather than a shortcut: a separate STT service would return
+words, and what this pipeline needs is *who said them* — an answer only counts
+when it came from the person being interviewed, never from the professional
+restating it. Speaker attribution and transcription in one call keeps that
+distinction intact, and it is the same model, the same SDK and the same billing
+surface as every other stage.
+
 ### Self-improvement over time — the Collaborative Partner criterion
 
 Practitioner-scoped memory: question phrasings that closed an item, and
