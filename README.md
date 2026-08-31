@@ -185,12 +185,12 @@ echo 'FIRESTORE_DATABASE=intake' >> .env
 You can also skip Firestore entirely — set `INTAKE_STORE=memory` and everything
 runs, minus durability. `GET /health` always tells you which store is live.
 
-### 2. Verify the adjudicator before anything else
+### 2. Reproducible testing — verify the adjudicator before anything else
 
 The adjudicator is the product, so it is the first thing to run:
 
 ```bash
-uv run --group dev pytest backend/tests -q   # 51 tests, no network
+uv run --group dev pytest backend/tests -q   # 134 tests, no network
 cd eval && uv run python run_eval.py         # 47 labelled cases, real Vertex calls
 ```
 
@@ -223,16 +223,16 @@ printf 'choose-a-long-random-string' | gcloud secrets create intake-api-key --da
 ./backend/deploy.sh
 ```
 
-Then build the client against it:
-
-```bash
-cd web && VITE_API_BASE=https://intake-agent-xxxx.run.app npm run build
-```
+`deploy.sh` builds the web client and ships it inside the image, so the deployed
+URL serves the app itself rather than a bare API. It builds with an empty
+`VITE_API_BASE`, meaning "call my own origin" — there is no separate client
+build step and no CORS surface.
 
 **The access code is never built in.** Vite inlines `import.meta.env.*` at build
 time, so a `VITE_API_KEY` would ship readable inside the JS bundle — a published
 credential to an endpoint that spends money on Vertex AI per request. The app
-asks for the code instead and keeps it in `sessionStorage` for that tab only.
+asks for the code instead and keeps it in the browser's `localStorage`; a
+`?key=…` parameter also works and is stripped from the address bar.
 
 Every request that costs money requires `X-Intake-Key` and is rate limited per
 key. The service refuses to start ungated: with no `INTAKE_API_KEY` set it
