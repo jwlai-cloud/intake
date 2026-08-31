@@ -70,6 +70,10 @@ Gemini 3.6 Flash on Vertex AI. Google ADK 2.6.2 in Python. Cloud Run, with state
 in Firestore, the API key in Secret Manager, and the agent's own audit trail in
 Cloud Logging.
 
+It is audio in, not text. Real speech, chunked at 15 to 20 seconds, transcribed
+with speaker attribution and then judged — the vagueness of a spoken answer is
+the whole signal, and it does not survive a text-only pipeline.
+
 One chunk of audio in, one turn of work out:
 
 ```

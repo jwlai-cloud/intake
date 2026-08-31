@@ -91,6 +91,67 @@ the direction that blocked a migration for three days.
 close which items, learned across interviews. Never about the people being
 interviewed — that would break the privacy guarantee that makes this deployable.
 
+## Against the judging criteria
+
+From Devpost's "How to Win" Q&A (26 Aug). Mapped so a judge can find the
+evidence rather than take the claim.
+
+### Innovation & operational utility — the heaviest criterion, ~40%
+
+The innovation is one sentence: **every competitor ticks a required item when
+it is mentioned; this one ticks when it is answered.** Teams' Facilitator marks
+a topic covered "once the discussion has started"; Balto ticks on mention;
+Otter checks off objectives. None adjudicate whether a real answer arrived, and
+none gate the output on it.
+
+The operational utility is what that saves. A gap found at the desk that evening
+costs a phone call, a guess, or a second visit — and on a mandated form, a blank
+field is a compliance problem, not an inconvenience. Intake surfaces it while
+the person is still in the room, and refuses to produce the report until every
+required item is answered, formally declined, or escalated with a follow-up the
+agent drafts and routes itself.
+
+Not a retrieval system. Nothing is searched; the agent judges, decides, refuses,
+and files.
+
+### Architectural design & tech stack
+
+- Bounded state: the slot state is the state, not the transcript, so a
+  three-hour interview costs the same per chunk as a ten-minute one (ADR-0002)
+- One isolated Gemini call per open item, fanned out — a wrong verdict on one
+  item cannot corrupt another, and each is separately scoreable
+- Orchestration chosen by measurement, not fashion: `SequentialAgent` and the
+  graph `Workflow` both emit content-less events that ADK's own eval CLI
+  rejects, so a custom `BaseAgent` is the only evaluable shape (ADR-0013)
+- Guarantees enforced by schema and closed lists rather than by prompt text
+- 134 tests, no network; CI runs `pip-audit` weekly
+
+### Google Cloud integration
+
+Cloud Run (the service and the client), Vertex AI (Gemini 3.6 Flash, plus 2.5
+Flash TTS and 3.1 Flash Image for demo assets), Firestore (session state and
+practitioner memory), Secret Manager (the API key), Cloud Logging (the agent's
+own audit trail, which is what the demo shows as cloud proof).
+
+### Multimodal
+
+Audio in, not text. Real speech is chunked at 15–20s, transcribed with speaker
+attribution, and adjudicated — the vagueness of a spoken answer is the signal
+the product exists to catch, and it does not survive a text-only pipeline.
+
+### Self-improvement over time — the Collaborative Partner criterion
+
+Practitioner-scoped memory: question phrasings that closed an item, and
+highlight categories she repeatedly dismisses. Verified in production, not
+asserted — see ADR-0014 and `backend/intake_agent/memory.py`. It deliberately
+learns nothing about the people interviewed, and a test proves it cannot.
+
+### Demo readiness
+
+Under 4 minutes, the product working in the first 10 seconds, live Cloud Run
+logs on screen, and the `.run.app` URL visible. The hosted URL serves the real
+app and is kept warm for judging.
+
 ## Data sources
 
 **No real client, patient or employer material is used anywhere** — not in the
